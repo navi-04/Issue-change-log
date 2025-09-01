@@ -1,0 +1,23 @@
+image: node:18
+
+pipelines:
+  branches:
+    # develop:
+    #   - step:
+    #       name: Deploy to Development
+    #       caches:
+    #         - node
+    #       script:
+    #         - npm ci
+    #         - npx forge settings set usage-analytics false
+    #         - npx forge deploy --environment development
+
+    main:
+      - step:
+          name: Deploy to Production
+          caches:
+            - node
+          script:
+            - npm ci
+            - npx forge settings set usage-analytics false
+            - npx forge deploy --environment production
