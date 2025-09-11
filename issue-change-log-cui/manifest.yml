@@ -4,7 +4,10 @@ modules:
       resource: main
       resolver:
         function: resolver
-      viewportSize: medium
+      size: 
+        width: 100%      # can be fixed px (e.g., 800) or percentage
+        height: 100%       # height in px
+      viewportSize: large
       title: issue-change-log-cui
       icon: https://developer.atlassian.com/platform/forge/images/issue-panel-icon.svg
   function:
@@ -13,9 +16,14 @@ modules:
 resources:
   - key: main
     path: static/hello-world/build
+    tunnel:
+      port: 3000
 permissions:
   scopes:
     - read:jira-work
+  content:
+    styles:
+      - 'unsafe-inline'
 app:
   runtime:
     name: nodejs22.x

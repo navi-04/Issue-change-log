@@ -1,6 +1,12 @@
 // src/App.js
 import React, { useEffect, useState } from "react";
 import { invoke } from "@forge/bridge";
+import Button from "@atlaskit/button";
+import DropdownMenu, {
+  DropdownItem,
+  DropdownItemGroup,
+} from "@atlaskit/dropdown-menu";
+
 
 const currentDev = "devSuvitha";
 
@@ -129,7 +135,7 @@ export default function App() {
       }
     };
     fetchData();
-    intervalId = setInterval(fetchData, 10000);
+    intervalId = setInterval(fetchData, 100000000000);
     return () => clearInterval(intervalId);
   }, [filter]);
 
@@ -151,27 +157,27 @@ export default function App() {
     <div style={{ padding: "16px", fontFamily: "Arial, sans-serif" }}>
       {/* Filters */}
       <div style={{ marginBottom: "16px" }}>
-        <strong>Filter by Time: </strong>
-        <select
-          value={filter.value}
-          onChange={(e) =>
-            setFilter(
-              filterOptions.find((opt) => opt.value === e.target.value)
-            )
-          }
-        >
-          {filterOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <button
+        <p>Filter by Time: </p>
+        <DropdownMenu trigger={filter.label} shouldRenderToParent>
+              <DropdownItemGroup>
+                {filterOptions.map((opt) => (
+                  <DropdownItem
+                    key={opt.value}
+                    onClick={() => setFilter(opt)}
+                    isSelected={filter.value === opt.value}
+                  >
+                    {opt.label}
+                  </DropdownItem>
+                ))}
+              </DropdownItemGroup>
+            </DropdownMenu>
+        <Button
           style={{ marginLeft: "12px" }}
           onClick={() => exportCSV(sortedData, userTimeZone)}
+          appearance="primary"
         >
           Export CSV
-        </button>
+        </Button>
       </div>
 
       {/* Table */}

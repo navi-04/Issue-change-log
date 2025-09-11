@@ -4,8 +4,12 @@
   "private": true,
   "homepage": ".",
   "dependencies": {
+    "@atlaskit/button": "^17.2.1",
     "@atlaskit/css-reset": "^6.6.2",
+    "@atlaskit/dropdown-menu": "^16.3.3",
     "@forge/bridge": "5.4.0",
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
     "react": "^16",
     "react-dom": "^16"
   },

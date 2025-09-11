@@ -199,7 +199,7 @@ const devSuvitha = async (req) => {
   }
 };
 
-/**
+/** 
  * Register resolver
  */
 const resolver = new Resolver();
