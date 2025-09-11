@@ -27,6 +27,6 @@ permissions:
 app:
   runtime:
     name: nodejs22.x
-    memoryMB: 256
-    architecture: arm64
-  id: ari:cloud:ecosystem::app/6cb27aaf-5f25-451b-86cb-7b35d57cdcf7
+    # memoryMB: 256
+    # architecture: arm64
+  id: ari:cloud:ecosystem::app/c3a73ddb-e9f4-4a80-a329-94ffa3f2091d
