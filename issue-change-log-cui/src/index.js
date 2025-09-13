@@ -7,14 +7,16 @@ import { storage } from "@forge/api";
  */
 const checkProjectAccess = async (projectKey) => {
   try {
-    const allowedProjects = await storage.get("allowedProjects") || [];
-    
+    const allowedProjects = (await storage.get("allowedProjects")) || [];
+
     // If no projects are configured yet, allow access (for initial setup)
     if (allowedProjects.length === 0) {
-      console.log("No projects configured yet, allowing access for initial setup");
+      console.log(
+        "No projects configured yet, allowing access for initial setup"
+      );
       return true;
     }
-    
+
     return allowedProjects.includes(projectKey);
   } catch (error) {
     console.error("Error checking project access:", error);
@@ -27,17 +29,23 @@ const checkProjectAccess = async (projectKey) => {
  */
 const checkSiteAdminAccess = async () => {
   try {
-    const res = await api.asUser().requestJira(route`/rest/api/3/myself`);
+    const res = await api
+      .asUser()
+      .requestJira(route`/rest/api/3/myself?expand=groups`);
+
     if (!res.ok) return false;
-    
+
     const user = await res.json();
+
+    // Extract all group names
     const groups = user.groups?.items || [];
-    
+
+    console.log("User:", user.displayName);
+    console.log("Groups:", groups);
     // Check if user is in site-admins group or jira-administrators
-    return groups.some(group => 
-      group.name === "site-admins" || 
-      group.name === "jira-administrators" ||
-      group.name === "administrators"
+    return groups.some(
+      (group) =>
+        group.name === "site-admins" || group.name === "jira-administrators" || group.name === "org-admins"
     );
   } catch (error) {
     console.error("Error checking admin access:", error);
@@ -50,9 +58,11 @@ const checkSiteAdminAccess = async () => {
  */
 const getProjectKeyFromIssue = async (issueKey) => {
   try {
-    const res = await api.asUser().requestJira(route`/rest/api/3/issue/${issueKey}?fields=project`);
+    const res = await api
+      .asUser()
+      .requestJira(route`/rest/api/3/issue/${issueKey}?fields=project`);
     if (!res.ok) return null;
-    
+
     const issue = await res.json();
     return issue.fields?.project?.key;
   } catch (error) {
@@ -176,7 +186,7 @@ const fetchIssueAttachments = async (issueKey, cutoffDate) => {
 const devSuvitha = async (req) => {
   try {
     console.log("Request received:", JSON.stringify(req, null, 2));
-    
+
     // Determine issue keys
     let issueKeys = req.issueKeys || req.payload?.issueKeys;
     let contextKey = req?.context?.extension?.issue?.key;
@@ -196,29 +206,29 @@ const devSuvitha = async (req) => {
     for (const issueKey of issueKeys) {
       const projectKey = await getProjectKeyFromIssue(issueKey);
       console.log(`Issue ${issueKey} belongs to project: ${projectKey}`);
-      
+
       if (!projectKey) {
         console.error(`Could not determine project for issue: ${issueKey}`);
-        return { 
+        return {
           error: "Access denied: Could not determine project",
-          changelog: [], 
-          comments: [], 
-          attachments: [], 
-          total: 0 
+          changelog: [],
+          comments: [],
+          attachments: [],
+          total: 0,
         };
       }
 
       const hasAccess = await checkProjectAccess(projectKey);
       console.log(`Project ${projectKey} has access: ${hasAccess}`);
-      
+
       if (!hasAccess) {
         console.log(`Access denied for project: ${projectKey}`);
-        return { 
+        return {
           error: `Access denied: Project ${projectKey} is not authorized to use this app`,
-          changelog: [], 
-          comments: [], 
-          attachments: [], 
-          total: 0 
+          changelog: [],
+          comments: [],
+          attachments: [],
+          total: 0,
         };
       }
     }
@@ -290,12 +300,12 @@ const devSuvitha = async (req) => {
     return result;
   } catch (e) {
     console.error("Error fetching changelog:", e);
-    return { 
+    return {
       error: e.message,
-      changelog: [], 
-      comments: [], 
-      attachments: [], 
-      total: 0 
+      changelog: [],
+      comments: [],
+      attachments: [],
+      total: 0,
     };
   }
 };
@@ -310,7 +320,7 @@ const getAllowedProjects = async (req) => {
       return { error: "Access denied: Admin privileges required" };
     }
 
-    const allowedProjects = await storage.get("allowedProjects") || [];
+    const allowedProjects = (await storage.get("allowedProjects")) || [];
     return { allowedProjects };
   } catch (error) {
     console.error("Error getting allowed projects:", error);
@@ -333,7 +343,7 @@ const addAllowedProject = async (req) => {
       return { error: "Project key is required" };
     }
 
-    const allowedProjects = await storage.get("allowedProjects") || [];
+    const allowedProjects = (await storage.get("allowedProjects")) || [];
     if (!allowedProjects.includes(projectKey)) {
       allowedProjects.push(projectKey);
       await storage.set("allowedProjects", allowedProjects);
@@ -361,8 +371,8 @@ const removeAllowedProject = async (req) => {
       return { error: "Project key is required" };
     }
 
-    const allowedProjects = await storage.get("allowedProjects") || [];
-    const updatedProjects = allowedProjects.filter(key => key !== projectKey);
+    const allowedProjects = (await storage.get("allowedProjects")) || [];
+    const updatedProjects = allowedProjects.filter((key) => key !== projectKey);
     await storage.set("allowedProjects", updatedProjects);
 
     return { success: true, allowedProjects: updatedProjects };
@@ -388,12 +398,12 @@ const getAllProjects = async (req) => {
     }
 
     const projects = await res.json();
-    return { 
-      projects: projects.map(p => ({
+    return {
+      projects: projects.map((p) => ({
         key: p.key,
         name: p.name,
-        projectTypeKey: p.projectTypeKey
-      }))
+        projectTypeKey: p.projectTypeKey,
+      })),
     };
   } catch (error) {
     console.error("Error getting all projects:", error);
@@ -407,8 +417,8 @@ const getAllProjects = async (req) => {
 const getAccessInfo = async (req) => {
   try {
     const isAdmin = await checkSiteAdminAccess();
-    const allowedProjects = await storage.get("allowedProjects") || [];
-    
+    const allowedProjects = (await storage.get("allowedProjects")) || [];
+
     // Get current project if issue context is available
     let currentProject = null;
     const contextKey = req?.context?.extension?.issue?.key;
@@ -420,7 +430,9 @@ const getAccessInfo = async (req) => {
       isAdmin,
       allowedProjects,
       currentProject,
-      hasAccess: currentProject ? allowedProjects.includes(currentProject) : null
+      hasAccess: currentProject
+        ? allowedProjects.includes(currentProject)
+        : null,
     };
   } catch (error) {
     console.error("Error getting access info:", error);
@@ -428,7 +440,7 @@ const getAccessInfo = async (req) => {
   }
 };
 
-/** 
+/**
  * Register resolver
  */
 const resolver = new Resolver();
