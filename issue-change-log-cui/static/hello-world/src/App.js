@@ -98,10 +98,20 @@ export default function App() {
       setLoading(true);
       setError(null);
       try {
+        console.log("Fetching data with filter:", filter.value);
         const result = await invoke(currentDev, {
           filter: filter.value,
-          issueKey: "KC-24",
+          // Remove hardcoded issue key to use context
         });
+        
+        console.log("Result received:", result);
+        
+        if (result && result.error) {
+          setError(result.error);
+          setData([]);
+          return;
+        }
+
         if (result && typeof result === "object") {
           const allActivities = [
             ...(result.changelog || []),
@@ -128,6 +138,7 @@ export default function App() {
           setData(result || []);
         }
       } catch (err) {
+        console.error("Error fetching data:", err);
         setError(err.message || "Unknown error");
         setData([]);
       } finally {
@@ -152,6 +163,28 @@ export default function App() {
     (page - 1) * logsPerPage,
     page * logsPerPage
   );
+
+  // If there's an access error, show access denied message
+  if (error && error.includes("Access denied")) {
+    return (
+      <div style={{ padding: "16px", fontFamily: "Arial, sans-serif" }}>
+        <div style={{ 
+          background: "#ffebee", 
+          border: "1px solid #f44336", 
+          borderRadius: "4px", 
+          padding: "16px", 
+          marginBottom: "16px" 
+        }}>
+          <h3 style={{ color: "#c62828", margin: "0 0 8px 0" }}>🔒 Access Restricted</h3>
+          <p style={{ margin: 0, color: "#424242" }}>{error}</p>
+          <p style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#666" }}>
+            Please contact your site administrator to request access for this project.
+            Admin can manage project access in Jira Settings → Apps → Issue Change Log Settings.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "16px", fontFamily: "Arial, sans-serif" }}>

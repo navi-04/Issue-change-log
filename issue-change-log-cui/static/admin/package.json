@@ -1,0 +1,39 @@
+{
+  "name": "jira-issue-changelog-admin-ui",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": ".",
+  "dependencies": {
+    "@atlaskit/button": "^17.2.1",
+    "@atlaskit/css-reset": "^6.6.2",
+    "@atlaskit/dropdown-menu": "^16.3.3",
+    "@atlaskit/form": "^10.2.4",
+    "@atlaskit/textfield": "^6.0.3",
+    "@atlaskit/select": "^17.2.0",
+    "@forge/bridge": "5.4.0",
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
+    "react": "^16",
+    "react-dom": "^16"
+  },
+  "devDependencies": {
+    "react-scripts": "^5.0.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "eject": "react-scripts eject"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
