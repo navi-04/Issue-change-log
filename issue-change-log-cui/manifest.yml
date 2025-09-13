@@ -8,14 +8,14 @@ modules:
         width: 100% # can be fixed px (e.g., 800) or percentage
         height: 100% # height in px
       viewportSize: large
-      title: issue-change-log-cui
+      title: Issue Changelog
       icon: https://developer.atlassian.com/platform/forge/images/issue-panel-icon.svg
   jira:adminPage:
-    - key: issue-change-log-admin-page
+    - key: issue-changelog-admin-page
       resource: admin
       resolver:
         function: resolver
-      title: Issue Change Log Settings
+      title: Issue ChangeLog Settings
   function:
     - key: resolver
       handler: index.handler
@@ -35,6 +35,7 @@ permissions:
     styles:
       - 'unsafe-inline'
 app:
+  name: Issue Changelog
   runtime:
     name: nodejs22.x
   id: ari:cloud:ecosystem::app/7b2cd515-b3be-4196-b5ef-7e5646bcf4bd
