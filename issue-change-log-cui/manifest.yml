@@ -23,7 +23,7 @@ resources:
   - key: main
     path: static/hello-world/build
     tunnel:
-      port: 3000
+      port: 3000 
   - key: admin
     path: static/admin/build
     tunnel:
