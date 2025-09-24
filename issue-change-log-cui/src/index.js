@@ -33,7 +33,7 @@ const checkSiteAdminAccess = async () => {
       .asUser()
       .requestJira(route`/rest/api/3/myself?expand=groups`);
 
-    if (!res.ok) return false;
+    if (!res.ok) return false; 
 
     const user = await res.json();
 

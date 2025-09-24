@@ -8,24 +8,26 @@ modules:
         width: 100% # can be fixed px (e.g., 800) or percentage
         height: 100% # height in px
       viewportSize: large
-      title: issue-change-log-cui
+      title: Issue Changelog
       icon: https://developer.atlassian.com/platform/forge/images/issue-panel-icon.svg
   jira:adminPage:
-    - key: issue-change-log-admin-page
+    - key: issue-changelog-admin-page
       resource: admin
       resolver:
         function: resolver
-      title: Issue Change Log Settings
+      title: Issue ChangeLog Settings
   function:
     - key: resolver
       handler: index.handler
 resources:
   - key: main
     path: static/hello-world/build
+    tunnel:
+      port: 3000 
   - key: admin
     path: static/admin/build
-    # tunnel:
-    #   port: 3000
+    tunnel:
+      port: 3001
 permissions:
   scopes:
     - read:jira-work
