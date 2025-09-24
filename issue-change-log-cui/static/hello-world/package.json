@@ -16,6 +16,8 @@
     "@atlaskit/form": "^10.2.4",
     "@atlaskit/icon": "^22.0.0",
     "@atlaskit/pagination": "^14.4.0",
+    "@atlaskit/tabs": "^13.4.9",
+    "@atlaskit/tooltip": "^17.6.0",
     "@forge/bridge": "5.4.0",
     "ajv": "^8.17.1",
     "ajv-keywords": "^5.1.0",

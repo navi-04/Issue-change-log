@@ -1,0 +1,340 @@
+/* Dashboard Container */
+.dashboard-container {
+  padding: 16px;
+  background-color: #f4f5f7;
+  min-height: 100vh;
+}
+
+/* Header */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dashboard-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Dashboard Summary */
+.dashboard-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.summary-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 32px;
+  font-weight: bold;
+  color: #0052cc;
+}
+
+.summary-card p {
+  margin: 0;
+  color: #6b778c;
+  font-size: 14px;
+}
+
+/* Timeline List */
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Timeline Container */
+.timeline-container {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.timeline-container:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Timeline Header */
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timeline-header h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+  color: #172b4d;
+}
+
+.timeline-subtitle {
+  font-size: 12px;
+  color: #6b778c;
+  margin-top: 4px;
+}
+
+.current-status {
+  display: flex;
+  align-items: center;
+}
+
+/* Timeline Bars Container */
+.timeline-bars {
+  display: flex;
+  width: 100%;
+  height: 30px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin-bottom: 12px;
+  background-color: #f4f5f7;
+}
+
+/* Individual Timeline Bar */
+.timeline-bar {
+  position: relative;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.timeline-bar:last-child {
+  border-right: none;
+}
+
+.timeline-bar:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.timeline-bar-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Timeline Labels */
+.timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #6b778c;
+  margin-top: 8px;
+}
+
+.timeline-label-start,
+.timeline-label-end {
+  padding: 4px 0;
+}
+
+/* Tooltip Styles */
+.timeline-tooltip {
+  background: #172b4d;
+  color: white;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 250px;
+}
+
+.timeline-tooltip div {
+  margin-bottom: 4px;
+}
+
+.timeline-tooltip div:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-tooltip strong {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+/* Empty State */
+.dashboard-empty {
+  background: white;
+  border-radius: 8px;
+  padding: 48px 24px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-empty h3 {
+  margin: 0 0 16px 0;
+  color: #172b4d;
+  font-size: 24px;
+}
+
+.dashboard-empty p {
+  margin: 0 0 12px 0;
+  color: #6b778c;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 12px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .dashboard-controls {
+    justify-content: center;
+  }
+
+  .timeline-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .timeline-bars {
+    height: 40px;
+  }
+
+  .timeline-bar {
+    min-width: 30px;
+  }
+
+  .timeline-labels {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+
+  .dashboard-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .timeline-container {
+    padding: 16px;
+  }
+
+  .timeline-bars {
+    height: 35px;
+  }
+
+  .timeline-bar-text {
+    font-size: 10px;
+    padding: 0 4px;
+  }
+
+  .summary-card h3 {
+    font-size: 24px;
+  }
+}
+
+/* Animation for loading states */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.timeline-bar.loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Status-specific styling enhancements */
+.timeline-bar[data-status="Done"] {
+  background: linear-gradient(90deg, #00875a 0%, #36b37e 100%) !important;
+}
+
+.timeline-bar[data-status="In Progress"] {
+  background: linear-gradient(90deg, #0052cc 0%, #0065ff 100%) !important;
+}
+
+.timeline-bar[data-status="To Do"] {
+  background: linear-gradient(90deg, #6b778c 0%, #8993a4 100%) !important;
+}
+
+.timeline-bar[data-status="Blocked"] {
+  background: linear-gradient(90deg, #de350b 0%, #ff5630 100%) !important;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Accessibility improvements */
+.timeline-bar:focus {
+  outline: 2px solid #0052cc;
+  outline-offset: 2px;
+}
+
+.timeline-bar[role="button"] {
+  cursor: pointer;
+}
+
+/* Print styles */
+@media print {
+  .dashboard-container {
+    background: white;
+    padding: 0;
+  }
+
+  .timeline-container {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+
+  .timeline-bar {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
