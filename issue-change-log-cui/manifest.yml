@@ -22,10 +22,12 @@ modules:
 resources:
   - key: main
     path: static/hello-world/build
+    tunnel:
+      port: 3000
   - key: admin
     path: static/admin/build
-    # tunnel:
-    #   port: 3000
+    tunnel:
+      port: 3001
 permissions:
   scopes:
     - read:jira-work
@@ -35,7 +37,6 @@ permissions:
     styles:
       - 'unsafe-inline'
 app:
-  name: Issue Changelog
   runtime:
     name: nodejs22.x
   id: ari:cloud:ecosystem::app/7b2cd515-b3be-4196-b5ef-7e5646bcf4bd
