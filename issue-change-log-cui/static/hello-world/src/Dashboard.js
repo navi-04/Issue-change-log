@@ -98,17 +98,21 @@ const TimelineBar = ({ statusChange, totalDuration, userTimeZone, index }) => {
           backgroundColor: getStatusColor(statusChange.status),
           minWidth: "20px",
           height: "30px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: "block",
           color: "white",
-          fontSize: "12px",
-          fontWeight: "bold",
+          fontSize: "0px",
+          lineHeight: "0",
           cursor: "pointer",
           transition: "all 0.3s ease",
           transform: isHovered ? "scaleY(1.1)" : "scale(1)",
           zIndex: isHovered ? 10 : 1,
           position: "relative",
+          margin: "0",
+          padding: "0",
+          border: "none",
+          outline: "none",
+          boxSizing: "border-box",
+          float: "left",
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -198,23 +202,94 @@ export default function Dashboard() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [timeFilter, setTimeFilter] = useState("30d");
+
+  // Filter mode state - defaults to "all time" on refresh
+  const [filterMode, setFilterMode] = useState("relative");
+  const [relativeFilter, setRelativeFilter] = useState("all");
+
+  // Date range state with default all time range
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - 10); // 10 years ago for "all time"
+    return date.toISOString().slice(0, 10); // YYYY-MM-DD format for date input
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().slice(0, 10); // Today
+  });
 
   const userTimeZone = useUserTimeZone();
+
+  // Relative filter options
+  const relativeFilterOptions = [
+    { label: "Last 24 hours", value: "24h" },
+    { label: "Last 7 days", value: "7d" },
+    { label: "Last 30 days", value: "30d" },
+    { label: "Last 6 months", value: "6m" },
+    { label: "Last year", value: "1y" },
+    { label: "All time", value: "all" },
+  ];
+
+  // Calculate effective date range based on filter mode
+  const getEffectiveDateRange = () => {
+    if (filterMode === "custom") {
+      return {
+        startDateObj: new Date(startDate),
+        endDateObj: new Date(endDate),
+      };
+    } else {
+      // Relative filtering
+      const now = new Date();
+      const startDateObj = new Date();
+
+      switch (relativeFilter) {
+        case "24h":
+          startDateObj.setHours(startDateObj.getHours() - 24);
+          break;
+        case "7d":
+          startDateObj.setDate(startDateObj.getDate() - 7);
+          break;
+        case "30d":
+          startDateObj.setDate(startDateObj.getDate() - 30);
+          break;
+        case "6m":
+          startDateObj.setMonth(startDateObj.getMonth() - 6);
+          break;
+        case "1y":
+          startDateObj.setFullYear(startDateObj.getFullYear() - 1);
+          break;
+        case "all":
+          startDateObj.setFullYear(startDateObj.getFullYear() - 10);
+          break;
+        default:
+          startDateObj.setDate(startDateObj.getDate() - 30);
+      }
+
+      return { startDateObj, endDateObj: now };
+    }
+  };
 
   // Process data to create timeline information
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
+
+    // Get effective date range
+    const { startDateObj, endDateObj } = getEffectiveDateRange();
+    endDateObj.setHours(23, 59, 59, 999); // Include entire end date
 
     // Group by issue key
     const groupedByIssue = {};
 
     data.forEach((item) => {
       if (item.type === "changelog" && item.field === "status") {
-        if (!groupedByIssue[item.issueKey]) {
-          groupedByIssue[item.issueKey] = [];
+        const itemDate = new Date(item.date);
+
+        // Apply date range filter
+        if (itemDate >= startDateObj && itemDate <= endDateObj) {
+          if (!groupedByIssue[item.issueKey]) {
+            groupedByIssue[item.issueKey] = [];
+          }
+          groupedByIssue[item.issueKey].push(item);
         }
-        groupedByIssue[item.issueKey].push(item);
       }
     });
 
@@ -265,24 +340,16 @@ export default function Dashboard() {
     return processedIssues.sort(
       (a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate)
     );
-  }, [data]);
-
-  const timeFilterOptions = [
-    { label: "Last 24 hours", value: "24h" },
-    { label: "Last 7 days", value: "7d" },
-    { label: "Last 30 days", value: "30d" },
-    { label: "Last 6 months", value: "6m" },
-    { label: "Last year", value: "1y" },
-    { label: "All time", value: "all" },
-  ];
+  }, [data, startDate, endDate, filterMode, relativeFilter]);
 
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
       console.log("Fetching dashboard data...");
+      // Send all data request and filter on client side for better performance
       const result = await invoke(currentDev, {
-        filter: timeFilter,
+        filter: "all", // Get all data and filter client-side
       });
 
       console.log("Dashboard result received:", result);
@@ -314,10 +381,23 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-  }, [timeFilter]);
+  }, []); // Only fetch data on component mount
 
-  // Manual refresh
+  // Manual refresh - resets filters to "All time"
   const handleManualRefresh = () => {
+    // Reset filters to default "All time" state
+    setFilterMode("relative");
+    setRelativeFilter("all");
+
+    // Reset date range to all time
+    const startDate = new Date();
+    startDate.setFullYear(startDate.getFullYear() - 10);
+    const endDate = new Date();
+
+    setStartDate(startDate.toISOString().slice(0, 10));
+    setEndDate(endDate.toISOString().slice(0, 10));
+
+    // Fetch fresh data
     fetchData();
   };
 
@@ -382,20 +462,94 @@ export default function Dashboard() {
         </div>
 
         <div className="dashboard-controls">
-          <Select
-            value={timeFilterOptions.find((opt) => opt.value === timeFilter)}
-            options={timeFilterOptions}
-            onChange={(option) => setTimeFilter(option.value)}
-            styles={{
-              container: (provided) => ({ ...provided, minWidth: "200px" }),
-            }}
-          />
+          {/* Filter Mode Toggle */}
+          <div className="filter-mode-toggle">
+            <Button
+              appearance={filterMode === "relative" ? "primary" : "default"}
+              onClick={() => setFilterMode("relative")}
+            >
+              Relative
+            </Button>
+            <Button
+              appearance={filterMode === "custom" ? "primary" : "default"}
+              onClick={() => setFilterMode("custom")}
+            >
+              Custom Range
+            </Button>
+          </div>
+
+          {/* Relative Filter */}
+          {filterMode === "relative" && (
+            <Select
+              value={relativeFilterOptions.find(
+                (opt) => opt.value === relativeFilter
+              )}
+              options={relativeFilterOptions}
+              onChange={(option) => setRelativeFilter(option.value)}
+              styles={{
+                container: (provided) => ({ ...provided, minWidth: "200px" }),
+              }}
+            />
+          )}
+
+          {/* Custom Date Range */}
+          {filterMode === "custom" && (
+            <div className="date-range-picker">
+              <div className="date-input-wrapper">
+                <label htmlFor="start-date" className="date-label">
+                  Start:
+                </label>
+                <input
+                  id="start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="date-picker-input"
+                  placeholder="Start Date"
+                />
+              </div>
+
+              <div className="date-input-wrapper">
+                <label htmlFor="end-date" className="date-label">
+                  End:
+                </label>
+                <input
+                  id="end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="date-picker-input"
+                  placeholder="End Date"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Active Filter Indicator */}
+          <div className="active-filter-display">
+            {filterMode === "relative" ? (
+              <span className="filter-info">
+                📅{" "}
+                {
+                  relativeFilterOptions.find(
+                    (opt) => opt.value === relativeFilter
+                  )?.label
+                }
+              </span>
+            ) : (
+              <span className="filter-info">
+                📅 {new Date(startDate).toLocaleDateString()} →{" "}
+                {new Date(endDate).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+
           <Button
             appearance="primary"
             onClick={handleManualRefresh}
             isLoading={loading}
           >
-            {loading ? "Refreshing..." : "Refresh"}
+            {loading ? "Refreshing..." : "🔄 Reset & Refresh"}
           </Button>
         </div>
       </div>

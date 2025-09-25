@@ -24,6 +24,97 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  max-width: 100%;
+  justify-content: flex-start;
+}
+
+/* Date Range Picker */
+.date-range-picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: #f4f5f7;
+  border-radius: 6px;
+  border: 1px solid #dfe1e6;
+  flex-wrap: wrap;
+  max-width: 350px;
+}
+
+.date-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #172b4d;
+  margin: 0;
+  min-width: 40px;
+}
+
+.date-picker-input {
+  padding: 6px 10px;
+  border: 2px solid #dfe1e6;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: white;
+  cursor: pointer;
+  min-width: 120px;
+  max-width: 140px;
+}
+
+.date-picker-input:focus {
+  outline: none;
+  border-color: #0052cc;
+  box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.2);
+}
+
+.date-picker-input:hover {
+  border-color: #b3d4ff;
+}
+
+/* Filter Mode Toggle */
+.filter-mode-toggle {
+  display: flex;
+  gap: 1px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #dfe1e6;
+  flex-shrink: 0;
+}
+
+.filter-mode-toggle button {
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+/* Active Filter Display */
+.active-filter-display {
+  padding: 6px 10px;
+  background-color: #e3fcef;
+  border: 1px solid #00875a;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #00875a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Dashboard Content */
@@ -127,14 +218,27 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   margin-bottom: 12px;
   background-color: #f4f5f7;
+  gap: 0 !important;
+  margin: 0;
+  padding: 0;
+  border-spacing: 0;
 }
 
 /* Individual Timeline Bar */
 .timeline-bar {
   position: relative;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  border: none !important;
+  outline: none !important;
+}
+
+.timeline-bar:not(:first-child) {
+  margin-left: -1px !important;
 }
 
 .timeline-bar:last-child {
@@ -228,6 +332,39 @@
 
   .dashboard-controls {
     justify-content: center;
+    gap: 8px;
+  }
+
+  .date-range-picker {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    max-width: none;
+    padding: 8px;
+  }
+
+  .date-input-wrapper {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .date-picker-input {
+    flex: 1;
+    min-width: 100px;
+    max-width: none;
+  }
+
+  .filter-mode-toggle {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .active-filter-display {
+    width: 100%;
+    max-width: none;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
   }
 
   .timeline-header {
@@ -272,6 +409,25 @@
 
   .summary-card h3 {
     font-size: 24px;
+  }
+
+  .dashboard-controls {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .date-range-picker {
+    padding: 6px;
+  }
+
+  .date-label {
+    font-size: 12px;
+    min-width: 35px;
+  }
+
+  .active-filter-display {
+    padding: 4px 8px;
   }
 }
 
