@@ -16,6 +16,12 @@ modules:
       resolver:
         function: resolver
       title: Issue ChangeLog Settings
+  jira:projectSettingsPage:
+    - key: issue-changelog-project-settings
+      resource: project-settings
+      resolver:
+        function: resolver
+      title: Issue ChangeLog
   function:
     - key: resolver
       handler: index.handler
@@ -28,6 +34,10 @@ resources:
     path: static/admin/build
     tunnel:
       port: 3001
+  - key: project-settings
+    path: static/project-settings/build
+    # tunnel:
+    #   port: 3002
 permissions:
   scopes:
     - read:jira-work

@@ -231,6 +231,21 @@ const devSuvitha = async (req) => {
           total: 0,
         };
       }
+
+      // Check if the app is enabled for this specific project
+      const projectSettings = (await storage.get(`project_${projectKey}_settings`)) || {};
+      const isProjectAppEnabled = projectSettings.enabled !== false; // Default to true if not set
+      
+      if (!isProjectAppEnabled) {
+        console.log(`App disabled for project: ${projectKey}`);
+        return {
+          error: `The Issue ChangeLog app has been disabled for this project by your project administrator`,
+          changelog: [],
+          comments: [],
+          attachments: [],
+          total: 0,
+        };
+      }
     }
 
     // Parse filter
@@ -441,6 +456,177 @@ const getAccessInfo = async (req) => {
 };
 
 /**
+ * Check if current user is a project admin
+ */
+const checkProjectAdminAccess = async (projectKey) => {
+  try {
+    // Get current user info
+    const userRes = await api.asUser().requestJira(route`/rest/api/3/myself`);
+    if (!userRes.ok) return false;
+    
+    const user = await userRes.json();
+    const userId = user.accountId;
+
+    // Check if user has project admin permissions
+    const permRes = await api.asUser().requestJira(
+      route`/rest/api/3/mypermissions?projectKey=${projectKey}&permissions=ADMINISTER_PROJECTS`
+    );
+    
+    if (!permRes.ok) return false;
+    
+    const permissions = await permRes.json();
+    return permissions.permissions?.ADMINISTER_PROJECTS?.havePermission || false;
+  } catch (error) {
+    console.error("Error checking project admin access:", error);
+    return false;
+  }
+};
+
+/**
+ * Get current project context and settings
+ */
+const getProjectSettings = async (req) => {
+  try {
+    console.log("getProjectSettings request:", JSON.stringify(req, null, 2));
+    
+    // Get current project from context - try multiple possible paths for project admin pages
+    let projectKey = req?.context?.extension?.project?.key ||
+                    req?.context?.project?.key ||
+                    req?.context?.extension?.context?.project?.key ||
+                    req?.payload?.projectKey ||
+                    req?.projectKey;
+    
+    console.log("Project key from context:", projectKey);
+    
+    // If still no project key, try to extract from URL context or other admin page contexts
+    if (!projectKey && req?.context) {
+      console.log("Full context object:", JSON.stringify(req.context, null, 2));
+    }
+    
+    if (!projectKey) {
+      return { 
+        success: false, 
+        message: "No project context available - please ensure you are accessing this from a project settings page",
+        debug: {
+          contextExtension: req?.context?.extension,
+          context: req?.context,
+          payload: req?.payload
+        }
+      };
+    }
+
+    // Check if project is allowed by site admin
+    const allowedProjects = (await storage.get("allowedProjects")) || [];
+    const hasPermission = allowedProjects.includes(projectKey);
+    
+    if (!hasPermission) {
+      return {
+        success: true,
+        hasPermission: false,
+        project: { key: projectKey },
+        isEnabled: false
+      };
+    }
+
+    // Check if user is project admin
+    const isProjectAdmin = await checkProjectAdminAccess(projectKey);
+    console.log("Is project admin:", isProjectAdmin);
+
+    // Get project details
+    const projectRes = await api.asUser().requestJira(route`/rest/api/3/project/${projectKey}`);
+    let projectData = { key: projectKey };
+    
+    if (projectRes.ok) {
+      const project = await projectRes.json();
+      projectData = {
+        key: project.key,
+        name: project.name,
+        projectTypeKey: project.projectTypeKey
+      };
+    }
+
+    // Get project-specific app settings
+    const projectSettings = (await storage.get(`project_${projectKey}_settings`)) || {};
+    const isEnabled = projectSettings.enabled !== false; // Default to true if not set
+    
+    return {
+      success: true,
+      project: projectData,
+      hasPermission: true,
+      isEnabled: isEnabled,
+      isProjectAdmin: isProjectAdmin
+    };
+  } catch (error) {
+    console.error("Error getting project settings:", error);
+    return { 
+      success: false, 
+      message: error.message 
+    };
+  }
+};
+
+/**
+ * Toggle app enablement for a project
+ */
+const toggleProjectApp = async (req) => {
+  try {
+    console.log("toggleProjectApp request:", JSON.stringify(req, null, 2));
+    
+    const { enabled } = req.payload || req;
+    // Get current project from context - try multiple possible paths for project admin pages
+    const projectKey = req?.context?.extension?.project?.key ||
+                      req?.context?.project?.key ||
+                      req?.context?.extension?.context?.project?.key ||
+                      req?.payload?.projectKey ||
+                      req?.projectKey;
+    
+    if (!projectKey) {
+      return { 
+        success: false, 
+        message: "No project context available - please ensure you are accessing this from a project settings page" 
+      };
+    }
+
+    // Check if project is allowed by site admin
+    const allowedProjects = (await storage.get("allowedProjects")) || [];
+    if (!allowedProjects.includes(projectKey)) {
+      return {
+        success: false,
+        message: "Project is not authorized by site administrator"
+      };
+    }
+
+    // Check if user is project admin
+    const isProjectAdmin = await checkPrdojectAdminAccess(projectKey);
+    if (!isProjectAdmin) {
+      return {
+        success: false,
+        message: "Access denied: Project administrator privileges required"
+      };
+    }
+
+    // Update project settings
+    const projectSettings = (await storage.get(`project_${projectKey}_settings`)) || {};
+    projectSettings.enabled = enabled;
+    projectSettings.lastUpdated = new Date().toISOString();
+    
+    await storage.set(`project_${projectKey}_settings`, projectSettings);
+    
+    return {
+      success: true,
+      enabled: enabled,
+      message: `App ${enabled ? 'enabled' : 'disabled'} for project ${projectKey}`
+    };
+  } catch (error) {
+    console.error("Error toggling project app:", error);
+    return { 
+      success: false, 
+      message: error.message 
+    };
+  }
+};
+
+/**
  * Register resolver
  */
 const resolver = new Resolver();
@@ -450,5 +636,7 @@ resolver.define("addAllowedProject", addAllowedProject);
 resolver.define("removeAllowedProject", removeAllowedProject);
 resolver.define("getAllProjects", getAllProjects);
 resolver.define("getAccessInfo", getAccessInfo);
+resolver.define("getProjectSettings", getProjectSettings);
+resolver.define("toggleProjectApp", toggleProjectApp);
 
 export const handler = resolver.getDefinitions();

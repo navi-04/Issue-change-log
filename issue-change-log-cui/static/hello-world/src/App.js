@@ -81,6 +81,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [pageLoading, setPageLoading] = useState(false);
   
   // Column filters
   const [filters, setFilters] = useState({
@@ -201,11 +202,29 @@ export default function App() {
     );
   }, [filteredData]);
 
-  // Paginated data
+  // Paginated data with performance optimization for large datasets
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
-    return sortedData.slice(startIndex, startIndex + pageSize);
-  }, [sortedData, currentPage, pageSize]);
+    const endIndex = startIndex + pageSize;
+    const slicedData = sortedData.slice(startIndex, endIndex);
+    
+    console.log(`Pagination info:`, {
+      totalItems: sortedData.length,
+      currentPage,
+      pageSize,
+      startIndex,
+      endIndex,
+      returnedItems: slicedData.length,
+      totalPages: Math.ceil(sortedData.length / pageSize)
+    });
+    
+    // Add a small delay for very large datasets to prevent UI blocking
+    if (sortedData.length > 1000 && pageLoading) {
+      setTimeout(() => setPageLoading(false), 100);
+    }
+    
+    return slicedData;
+  }, [sortedData, currentPage, pageSize, pageLoading]);
 
   const totalPages = Math.ceil(sortedData.length / pageSize);
 
@@ -321,7 +340,9 @@ export default function App() {
 
   // Reset to first page when filters change
   useEffect(() => {
+    setPageLoading(true);
     setCurrentPage(1);
+    setTimeout(() => setPageLoading(false), 50); // Small delay to show loading
   }, [filters]);
 
   // Update a specific filter
@@ -501,64 +522,86 @@ export default function App() {
     ]
   };
 
-  // Create table rows
-  const rows = paginatedData.map((entry, index) => ({
-    key: `row-${index}`,
-    cells: [
-      {
-        key: "author",
-        content: entry.author || "-"
-      },
-      {
-        key: "field",
-        content: (
-          <div>
-            {entry.type === "changelog" && (
-              <>
-                {entry.field === "status" && "🚦 "}
-                {entry.field === "priority" && "⚠️ "}
-                {entry.field === "assignee" && "👤 "}
-                {entry.field || "-"}
-              </>
-            )}
-            {entry.type === "comment" && (
-              <span>💬 Comment</span>
-            )}
-            {entry.type === "attachment" && entry.filename}
-          </div>
-        )
-      },
-      {
-        key: "from",
-        content: entry.type === "changelog" ? (entry.from || "-") : "-"
-      },
-      {
-        key: "to",
-        content: entry.type === "changelog" 
-          ? (entry.to || "-") 
-          : entry.type === "attachment" 
-            ? `${Math.round(entry.size / 1024)}KB` 
-            : entry.type === "comment"
-            ? (
-              <span title={entry.content}>
-                {entry.content || "-"}
-              </span>
-            )
-            : "-"
-      },
-      {
-        key: "date",
-        content: (
-          <div>
-            <div>{formatDate(entry.date || entry.created, userTimeZone)}</div>
-            <div style={{ fontSize: "12px", color: "#6b778c", marginTop: "2px" }}>
-              {getRelativeTime(entry.date || entry.created)}
-            </div>
-          </div>
-        )
+  // Create table rows with better error handling
+  const rows = useMemo(() => {
+    if (!paginatedData || paginatedData.length === 0) {
+      return [];
+    }
+    
+    return paginatedData.map((entry, index) => {
+      try {
+        return {
+          key: `row-${currentPage}-${index}`,
+          cells: [
+            {
+              key: "author",
+              content: entry.author || "-"
+            },
+            {
+              key: "field",
+              content: (
+                <div>
+                  {entry.type === "changelog" && (
+                    <>
+                      {entry.field === "status" && "🚦 "}
+                      {entry.field === "priority" && "⚠️ "}
+                      {entry.field === "assignee" && "👤 "}
+                      {entry.field || "-"}
+                    </>
+                  )}
+                  {entry.type === "comment" && (
+                    <span>💬 Comment</span>
+                  )}
+                  {entry.type === "attachment" && entry.filename}
+                </div>
+              )
+            },
+            {
+              key: "from",
+              content: entry.type === "changelog" ? (entry.from || "-") : "-"
+            },
+            {
+              key: "to",
+              content: entry.type === "changelog" 
+                ? (entry.to || "-") 
+                : entry.type === "attachment" 
+                  ? `${Math.round((entry.size || 0) / 1024)}KB` 
+                  : entry.type === "comment"
+                  ? (
+                    <span title={entry.content || ""}>
+                      {(entry.content || "").substring(0, 100) + ((entry.content || "").length > 100 ? "..." : "")}
+                    </span>
+                  )
+                  : "-"
+            },
+            {
+              key: "date",
+              content: (
+                <div>
+                  <div>{formatDate(entry.date || entry.created, userTimeZone)}</div>
+                  <div style={{ fontSize: "12px", color: "#6b778c", marginTop: "2px" }}>
+                    {getRelativeTime(entry.date || entry.created)}
+                  </div>
+                </div>
+              )
+            }
+          ]
+        };
+      } catch (error) {
+        console.error("Error creating row for entry:", entry, error);
+        return {
+          key: `error-row-${index}`,
+          cells: [
+            { key: "author", content: "Error" },
+            { key: "field", content: "Error loading this row" },
+            { key: "from", content: "-" },
+            { key: "to", content: "-" },
+            { key: "date", content: "-" }
+          ]
+        };
       }
-    ]
-  }));
+    });
+  }, [paginatedData, currentPage, userTimeZone]);
 
   if (loading) {
     return (
@@ -617,6 +660,12 @@ export default function App() {
           <p style={{ margin: "4px 0 0 0", color: "#6b778c", fontSize: "14px" }}>
             {sortedData.length} total {sortedData.length === 1 ? "activity" : "activities"}
             {hasActiveFilters && ` (${filteredData.length} filtered)`}
+            {totalPages > 1 && (
+              <>
+                {" • "}
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length}
+              </>
+            )}
           </p>
         </div>
         
@@ -643,10 +692,9 @@ export default function App() {
       <DynamicTable
         head={head}
         rows={rows}
-        rowsPerPage={pageSize}
-        defaultPage={1}
+        isFixedSize
         loadingSpinnerSize="large"
-        isLoading={loading}
+        isLoading={loading || pageLoading}
         emptyView={
           <div style={{ textAlign: "center", padding: "32px" }}>
             <p style={{ fontSize: "16px", margin: "0 0 8px 0", color: "#6b778c" }}>
@@ -688,8 +736,10 @@ export default function App() {
                 { label: "100", value: 100 }
               ]}
               onChange={(option) => {
+                setPageLoading(true);
                 setPageSize(option.value);
                 setCurrentPage(1);
+                setTimeout(() => setPageLoading(false), 50);
               }}
               isSearchable={false}
               styles={{
@@ -698,15 +748,74 @@ export default function App() {
             />
           </div>
 
-          <Pagination
-            pages={[...Array(totalPages)].map((_, i) => ({
-              href: `#page-${i + 1}`,
-              label: (i + 1).toString(),
-              'aria-label': `Page ${i + 1}`
-            }))}
-            selectedIndex={currentPage - 1}
-            onChange={(_, page) => setCurrentPage(page + 1)}
-          />
+          {totalPages <= 100 ? (
+            <Pagination
+              pages={[...Array(totalPages)].map((_, i) => i + 1)}
+              selectedIndex={currentPage - 1}
+              onChange={(_, page) => {
+                setPageLoading(true);
+                setCurrentPage(page + 1);
+                // Small delay to show loading for large datasets
+                setTimeout(() => setPageLoading(false), 50);
+              }}
+            />
+          ) : (
+            // Custom pagination for very large datasets (more than 100 pages)
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Button 
+                appearance="subtle" 
+                onClick={() => {
+                  setPageLoading(true);
+                  setCurrentPage(Math.max(1, currentPage - 1));
+                  setTimeout(() => setPageLoading(false), 50);
+                }}
+                isDisabled={currentPage === 1}
+              >
+                ← Previous
+              </Button>
+              
+              <span style={{ fontSize: "14px", color: "#6b778c", margin: "0 8px" }}>
+                Page {currentPage} of {totalPages}
+              </span>
+              
+              <Button 
+                appearance="subtle" 
+                onClick={() => {
+                  setPageLoading(true);
+                  setCurrentPage(Math.min(totalPages, currentPage + 1));
+                  setTimeout(() => setPageLoading(false), 50);
+                }}
+                isDisabled={currentPage === totalPages}
+              >
+                Next →
+              </Button>
+              
+              <div style={{ marginLeft: "16px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <span style={{ fontSize: "14px", color: "#6b778c" }}>Go to:</span>
+                <input 
+                  type="number" 
+                  min="1" 
+                  max={totalPages}
+                  value={currentPage}
+                  onChange={(e) => {
+                    const page = parseInt(e.target.value);
+                    if (page >= 1 && page <= totalPages) {
+                      setPageLoading(true);
+                      setCurrentPage(page);
+                      setTimeout(() => setPageLoading(false), 50);
+                    }
+                  }}
+                  style={{
+                    width: "60px",
+                    padding: "4px",
+                    border: "1px solid #ccc",
+                    borderRadius: "3px",
+                    textAlign: "center"
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
