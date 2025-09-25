@@ -229,17 +229,21 @@ export default function Dashboard() {
     { label: "All time", value: "all" },
   ];
 
-  // Calculate effective date range based on filter mode
-  const getEffectiveDateRange = () => {
+  // Process data to create timeline information
+  const processedData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+
+    // Calculate effective date range based on filter mode
+    let startDateObj, endDateObj;
+    
     if (filterMode === "custom") {
-      return {
-        startDateObj: new Date(startDate),
-        endDateObj: new Date(endDate),
-      };
+      startDateObj = new Date(startDate);
+      endDateObj = new Date(endDate);
+      console.log("Custom filter - Start:", startDate, "End:", endDate);
     } else {
       // Relative filtering
       const now = new Date();
-      const startDateObj = new Date();
+      startDateObj = new Date();
 
       switch (relativeFilter) {
         case "24h":
@@ -264,34 +268,40 @@ export default function Dashboard() {
           startDateObj.setDate(startDateObj.getDate() - 30);
       }
 
-      return { startDateObj, endDateObj: now };
+      endDateObj = now;
+      console.log("Relative filter:", relativeFilter, "Start:", startDateObj, "End:", endDateObj);
     }
-  };
 
-  // Process data to create timeline information
-  const processedData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-
-    // Get effective date range
-    const { startDateObj, endDateObj } = getEffectiveDateRange();
     endDateObj.setHours(23, 59, 59, 999); // Include entire end date
 
     // Group by issue key
     const groupedByIssue = {};
 
+    let totalItems = 0;
+    let filteredItems = 0;
+
     data.forEach((item) => {
       if (item.type === "changelog" && item.field === "status") {
+        totalItems++;
         const itemDate = new Date(item.date);
+
+        console.log(`Processing change: ${item.issueKey} - ${item.from} → ${item.to} on ${item.date} (${itemDate.toISOString()})`);
 
         // Apply date range filter
         if (itemDate >= startDateObj && itemDate <= endDateObj) {
+          console.log(`✓ Change included in filter range`);
+          filteredItems++;
           if (!groupedByIssue[item.issueKey]) {
             groupedByIssue[item.issueKey] = [];
           }
           groupedByIssue[item.issueKey].push(item);
+        } else {
+          console.log(`✗ Change outside filter range (${startDateObj.toISOString()} to ${endDateObj.toISOString()})`);
         }
       }
     });
+
+    console.log(`Filtering: ${filteredItems}/${totalItems} items match date range (${startDateObj.toISOString()} to ${endDateObj.toISOString()})`);
 
     // Process each issue's status changes
     const processedIssues = Object.entries(groupedByIssue).map(
@@ -310,36 +320,60 @@ export default function Dashboard() {
               ? sortedChanges[index + 1].date
               : null;
 
-          const duration = endDate
-            ? new Date(endDate) - new Date(startDate)
-            : new Date() - new Date(startDate);
+          // Only include timeline segments that overlap with the selected date range
+          const changeStartDate = new Date(startDate);
+          const changeEndDate = endDate ? new Date(endDate) : new Date();
 
-          statusTimeline.push({
-            status: change.to,
-            startDate,
-            endDate,
-            duration,
-            durationText: calculateDuration(startDate, endDate),
-            author: change.author,
-          });
+          // Check if this timeline segment overlaps with our filter range
+          const segmentOverlaps = changeStartDate <= endDateObj && changeEndDate >= startDateObj;
+          
+          console.log(`Checking segment for ${issueKey}: ${change.to} (${changeStartDate.toISOString()} to ${changeEndDate.toISOString()}) against filter range (${startDateObj.toISOString()} to ${endDateObj.toISOString()}) - Overlaps: ${segmentOverlaps}`);
+          
+          if (segmentOverlaps) {
+            // Clamp the segment dates to fit within the filter range
+            const clampedStartDate = new Date(Math.max(changeStartDate.getTime(), startDateObj.getTime()));
+            const clampedEndDate = new Date(Math.min(changeEndDate.getTime(), endDateObj.getTime()));
+            
+            // Only include segments that have meaningful duration within the filter range
+            const duration = clampedEndDate - clampedStartDate;
+            
+            if (duration > 0) {
+              console.log(`Including timeline segment for ${issueKey}: ${change.to} from ${clampedStartDate.toISOString()} to ${clampedEndDate.toISOString()} (duration: ${Math.round(duration / (1000 * 60 * 60 * 24))} days)`);
+
+              statusTimeline.push({
+                status: change.to,
+                startDate: clampedStartDate.toISOString(),
+                endDate: clampedEndDate < new Date() ? clampedEndDate.toISOString() : null,
+                duration,
+                durationText: calculateDuration(clampedStartDate.toISOString(), clampedEndDate < new Date() ? clampedEndDate.toISOString() : null),
+                author: change.author,
+              });
+            } else {
+              console.log(`Skipping zero-duration segment for ${issueKey}: ${change.to}`);
+            }
+          }
         });
 
-        return {
-          issueKey,
-          statusChanges: statusTimeline,
-          totalDuration: statusTimeline.reduce(
-            (sum, status) => sum + status.duration,
-            0
-          ),
-          lastUpdate: sortedChanges[sortedChanges.length - 1]?.date,
-        };
+        // Only return issues that have timeline segments within the date range
+        if (statusTimeline.length > 0) {
+          return {
+            issueKey,
+            statusChanges: statusTimeline,
+            totalDuration: statusTimeline.reduce(
+              (sum, status) => sum + status.duration,
+              0
+            ),
+            lastUpdate: sortedChanges[sortedChanges.length - 1]?.date,
+          };
+        }
+        return null;
       }
     );
 
-    // Sort by last update (most recent first)
-    return processedIssues.sort(
-      (a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate)
-    );
+    // Filter out null values and sort by last update (most recent first)
+    return processedIssues
+      .filter(issue => issue !== null)
+      .sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate));
   }, [data, startDate, endDate, filterMode, relativeFilter]);
 
   const fetchData = async () => {
@@ -472,7 +506,10 @@ export default function Dashboard() {
             </Button>
             <Button
               appearance={filterMode === "custom" ? "primary" : "default"}
-              onClick={() => setFilterMode("custom")}
+              onClick={() => {
+                console.log("Switching to custom filter mode");
+                setFilterMode("custom");
+              }}
             >
               Custom Range
             </Button>
@@ -503,7 +540,10 @@ export default function Dashboard() {
                   id="start-date"
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    console.log("Start date changed to:", e.target.value);
+                    setStartDate(e.target.value);
+                  }}
                   className="date-picker-input"
                   placeholder="Start Date"
                 />
@@ -517,7 +557,10 @@ export default function Dashboard() {
                   id="end-date"
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => {
+                    console.log("End date changed to:", e.target.value);
+                    setEndDate(e.target.value);
+                  }}
                   className="date-picker-input"
                   placeholder="End Date"
                 />
