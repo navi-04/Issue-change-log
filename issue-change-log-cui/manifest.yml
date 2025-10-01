@@ -29,7 +29,7 @@ resources:
   - key: main
     path: static/hello-world/build
     tunnel:
-      port: 3000 
+      port: 3000
   - key: admin
     path: static/admin/build
     tunnel:
@@ -49,4 +49,4 @@ permissions:
 app:
   runtime:
     name: nodejs22.x
-  id: ari:cloud:ecosystem::app/7b2cd515-b3be-4196-b5ef-7e5646bcf4bd
+  id: ari:cloud:ecosystem::app/d7f740c6-cdf5-4597-b89b-3b019b4420ae

@@ -204,11 +204,16 @@ export default function App() {
 
   // Paginated data with performance optimization for large datasets
   const paginatedData = useMemo(() => {
+    if (!sortedData || sortedData.length === 0) {
+      console.log('No data to paginate');
+      return [];
+    }
+    
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const slicedData = sortedData.slice(startIndex, endIndex);
     
-    console.log(`Pagination info:`, {
+    console.log(`Pagination calculation:`, {
       totalItems: sortedData.length,
       currentPage,
       pageSize,
@@ -218,15 +223,17 @@ export default function App() {
       totalPages: Math.ceil(sortedData.length / pageSize)
     });
     
-    // Add a small delay for very large datasets to prevent UI blocking
-    if (sortedData.length > 1000 && pageLoading) {
-      setTimeout(() => setPageLoading(false), 100);
-    }
-    
     return slicedData;
-  }, [sortedData, currentPage, pageSize, pageLoading]);
+  }, [sortedData, currentPage, pageSize]);
 
-  const totalPages = Math.ceil(sortedData.length / pageSize);
+  const totalPages = sortedData.length > 0 ? Math.ceil(sortedData.length / pageSize) : 1;
+  
+  console.log('Pagination state:', { 
+    dataLength: sortedData.length, 
+    pageSize, 
+    totalPages, 
+    currentPage 
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -660,7 +667,7 @@ export default function App() {
           <p style={{ margin: "4px 0 0 0", color: "#6b778c", fontSize: "14px" }}>
             {sortedData.length} total {sortedData.length === 1 ? "activity" : "activities"}
             {hasActiveFilters && ` (${filteredData.length} filtered)`}
-            {totalPages > 1 && (
+            {sortedData.length > pageSize && (
               <>
                 {" • "}
                 Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, sortedData.length)} of {sortedData.length}
@@ -716,15 +723,24 @@ export default function App() {
       />
 
       {/* Custom Pagination */}
-      {totalPages > 1 && (
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          marginTop: "16px",
-          flexWrap: "wrap",
-          gap: "16px"
-        }}>
+      {sortedData.length > 0 && (
+        <div 
+          style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center", 
+            marginTop: "16px",
+            flexWrap: "wrap",
+            gap: "16px"
+          }}
+          // Debug logging
+          ref={() => console.log('Pagination rendered:', { 
+            sortedDataLength: sortedData.length, 
+            pageSize, 
+            totalPages, 
+            currentPage 
+          })}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "14px", color: "#6b778c" }}>Items per page:</span>
             <Select
@@ -748,74 +764,105 @@ export default function App() {
             />
           </div>
 
-          {totalPages <= 100 ? (
-            <Pagination
-              pages={[...Array(totalPages)].map((_, i) => i + 1)}
-              selectedIndex={currentPage - 1}
-              onChange={(_, page) => {
-                setPageLoading(true);
-                setCurrentPage(page + 1);
-                // Small delay to show loading for large datasets
-                setTimeout(() => setPageLoading(false), 50);
-              }}
-            />
-          ) : (
-            // Custom pagination for very large datasets (more than 100 pages)
+          {sortedData.length > 0 ? (
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {/* Previous Button */}
               <Button 
                 appearance="subtle" 
                 onClick={() => {
-                  setPageLoading(true);
-                  setCurrentPage(Math.max(1, currentPage - 1));
-                  setTimeout(() => setPageLoading(false), 50);
+                  const newPage = Math.max(1, currentPage - 1);
+                  console.log('Previous clicked:', { currentPage, newPage });
+                  if (newPage !== currentPage) {
+                    setPageLoading(true);
+                    setCurrentPage(newPage);
+                    setTimeout(() => setPageLoading(false), 100);
+                  }
                 }}
-                isDisabled={currentPage === 1}
+                isDisabled={currentPage === 1 || totalPages === 1 || pageLoading}
               >
                 ← Previous
               </Button>
               
-              <span style={{ fontSize: "14px", color: "#6b778c", margin: "0 8px" }}>
-                Page {currentPage} of {totalPages}
-              </span>
+              {/* Page Numbers */}
+              {totalPages <= 10 ? (
+                // Show all page numbers if 10 or fewer pages
+                [...Array(totalPages)].map((_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <Button
+                      key={pageNum}
+                      appearance={pageNum === currentPage ? "primary" : "subtle"}
+                      onClick={() => {
+                        console.log('Page button clicked:', { pageNum, currentPage });
+                        if (pageNum !== currentPage) {
+                          setPageLoading(true);
+                          setCurrentPage(pageNum);
+                          setTimeout(() => setPageLoading(false), 100);
+                        }
+                      }}
+                      isDisabled={pageLoading}
+                      spacing="compact"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })
+              ) : (
+                // Show current page info for many pages
+                <span style={{ fontSize: "14px", color: "#6b778c", margin: "0 8px" }}>
+                  Page {currentPage} of {totalPages}
+                </span>
+              )}
               
+              {/* Next Button */}
               <Button 
                 appearance="subtle" 
                 onClick={() => {
-                  setPageLoading(true);
-                  setCurrentPage(Math.min(totalPages, currentPage + 1));
-                  setTimeout(() => setPageLoading(false), 50);
+                  const newPage = Math.min(totalPages, currentPage + 1);
+                  console.log('Next clicked:', { currentPage, newPage, totalPages });
+                  if (newPage !== currentPage) {
+                    setPageLoading(true);
+                    setCurrentPage(newPage);
+                    setTimeout(() => setPageLoading(false), 100);
+                  }
                 }}
-                isDisabled={currentPage === totalPages}
+                isDisabled={currentPage === totalPages || totalPages === 1 || pageLoading}
               >
                 Next →
               </Button>
               
-              <div style={{ marginLeft: "16px", display: "flex", alignItems: "center", gap: "4px" }}>
-                <span style={{ fontSize: "14px", color: "#6b778c" }}>Go to:</span>
-                <input 
-                  type="number" 
-                  min="1" 
-                  max={totalPages}
-                  value={currentPage}
-                  onChange={(e) => {
-                    const page = parseInt(e.target.value);
-                    if (page >= 1 && page <= totalPages) {
-                      setPageLoading(true);
-                      setCurrentPage(page);
-                      setTimeout(() => setPageLoading(false), 50);
-                    }
-                  }}
-                  style={{
-                    width: "60px",
-                    padding: "4px",
-                    border: "1px solid #ccc",
-                    borderRadius: "3px",
-                    textAlign: "center"
-                  }}
-                />
-              </div>
+              {/* Direct Page Input for many pages */}
+              {totalPages > 10 && (
+                <div style={{ marginLeft: "16px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "14px", color: "#6b778c" }}>Go to:</span>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max={totalPages}
+                    value={currentPage}
+                    onChange={(e) => {
+                      const page = parseInt(e.target.value, 10);
+                      console.log('Direct input:', { input: e.target.value, page, totalPages });
+                      if (!isNaN(page) && page >= 1 && page <= totalPages && page !== currentPage) {
+                        setPageLoading(true);
+                        setCurrentPage(page);
+                        setTimeout(() => setPageLoading(false), 100);
+                      }
+                    }}
+                    disabled={pageLoading}
+                    style={{
+                      width: "60px",
+                      padding: "4px 8px",
+                      border: "1px solid #ccc",
+                      borderRadius: "3px",
+                      textAlign: "center",
+                      fontSize: "14px"
+                    }}
+                  />
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

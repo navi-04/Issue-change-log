@@ -597,7 +597,7 @@ const toggleProjectApp = async (req) => {
     }
 
     // Check if user is project admin
-    const isProjectAdmin = await checkPrdojectAdminAccess(projectKey);
+    const isProjectAdmin = await checkProjectAdminAccess(projectKey);
     if (!isProjectAdmin) {
       return {
         success: false,
