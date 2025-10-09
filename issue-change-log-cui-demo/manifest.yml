@@ -8,7 +8,7 @@ modules:
         width: 100% # can be fixed px (e.g., 800) or percentage
         height: 100% # height in px
       viewportSize: large
-      title: Issue Changelog
+      title: Issue Changelog Forge
       icon: https://developer.atlassian.com/platform/forge/images/issue-panel-icon.svg
   jira:adminPage:
     - key: issue-changelog-admin-page
@@ -23,7 +23,7 @@ resources:
   - key: main
     path: static/hello-world/build
     tunnel:
-      port: 3000 
+      port: 3000
   - key: admin
     path: static/admin/build
     tunnel:
@@ -39,4 +39,4 @@ permissions:
 app:
   runtime:
     name: nodejs22.x
-  id: ari:cloud:ecosystem::app/7b2cd515-b3be-4196-b5ef-7e5646bcf4bd
+  id: ari:cloud:ecosystem::app/1c7d4e37-25ea-4b04-8e0c-58d3ee99c26b

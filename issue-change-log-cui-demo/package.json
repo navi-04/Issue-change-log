@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@atlaskit/button": "^17.2.1",
-    "@forge/api": "6.1.1",
-    "@forge/resolver": "1.7.0"
+    "@atlaskit/datetime-picker": "^16.0.0",
+    "@forge/api": "^6.1.1",
+    "@forge/resolver": "^1.7.0"
   }
 }

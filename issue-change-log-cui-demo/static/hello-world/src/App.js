@@ -2,20 +2,19 @@ import React, { useEffect, useState, useMemo } from "react";
 import { invoke } from "@forge/bridge";
 import DynamicTable from "@atlaskit/dynamic-table";
 import Button from "@atlaskit/button";
-import Textfield from "@atlaskit/textfield";
+import TextField from "@atlaskit/textfield";
 import Select from "@atlaskit/select";
 import Spinner from "@atlaskit/spinner";
 import Lozenge from "@atlaskit/lozenge";
 import Banner from "@atlaskit/banner";
 import Pagination from "@atlaskit/pagination";
+import { DatePicker } from "@atlaskit/datetime-picker";
 import "@atlaskit/css-reset";
 
-const currentDev = "devSuvitha";
+const currentDev = "devSahanaa";
 
-// Get user's local timezone
 const useUserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-// Date Formatter
 const formatDate = (dateString, timeZone) => {
   if (!dateString) return "-";
   return new Date(dateString).toLocaleString(undefined, {
@@ -28,7 +27,6 @@ const formatDate = (dateString, timeZone) => {
   });
 };
 
-// Relative Time
 const getRelativeTime = (date) => {
   if (!date) return "";
   const targetDate = new Date(date);
@@ -53,16 +51,31 @@ const getRelativeTime = (date) => {
   return `${years} year${years !== 1 ? "s" : ""} ago`;
 };
 
-// CSV Export
+const escapeCSV = (str) => `"${(str || "").replace(/"/g, '""')}"`;
+
 const exportCSV = (data, timeZone) => {
   const headers = ["Author", "Field/Content", "From", "To", "Date"];
   const rows = data.map((row) =>
     [
-      row.author,
-      row.type === "changelog" ? row.field : (row.type === "comment" ? "Comment" : (row.filename || "")),
-      row.type === "changelog" ? (row.from || "-") : "-",
-      row.type === "changelog" ? (row.to || "-") : (row.type === "attachment" ? `${Math.round(row.size / 1024)}KB` : (row.type === "comment" ? row.content : "-")),
-      formatDate(row.date || row.created, timeZone),
+      escapeCSV(row.author),
+      escapeCSV(
+        row.type === "changelog"
+          ? row.field
+          : row.type === "comment"
+          ? "Comment"
+          : row.filename || ""
+      ),
+      escapeCSV(row.type === "changelog" ? row.from || "-" : "-"),
+      escapeCSV(
+        row.type === "changelog"
+          ? row.to || "-"
+          : row.type === "attachment"
+          ? `${Math.round(row.size / 1024)}KB`
+          : row.type === "comment"
+          ? row.content
+          : "-"
+      ),
+      escapeCSV(formatDate(row.date || row.created, timeZone)),
     ].join(",")
   );
   const csv = [headers.join(","), ...rows].join("\n");
@@ -75,273 +88,234 @@ const exportCSV = (data, timeZone) => {
   a.click();
 };
 
+const mergeUniqueActivities = (result) => {
+  const allActivities = [
+    ...(result.changelog || []),
+    ...(result.comments || []),
+    ...(result.attachments || []),
+  ];
+
+  const seen = new Set();
+  return allActivities.filter((item) => {
+    let key = `${item.type}-${item.date || item.created}`;
+    if (item.type === "changelog") key += `-${item.field || ""}-${item.from || ""}-${item.to || ""}`;
+    if (item.type === "attachment") key += `-${item.filename || ""}`;
+    if (item.type === "comment") key += `-${item.content || ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const matchesDateFilter = (item, dateFilter, fromDate, toDate) => {
+  const itemDate = new Date(item.date || item.created);
+  if (isNaN(itemDate)) return false;
+  const now = new Date();
+  switch (dateFilter) {
+    case "all":
+    case "":
+      return true;
+    case "just_now":
+      return (now - itemDate) / 1000 <= 60;
+    case "5_minutes":
+      return (now - itemDate) / 1000 / 60 <= 5;
+    case "2_hours":
+      return (now - itemDate) / 1000 / 60 / 60 <= 2;
+    case "3_days":
+      return (now - itemDate) / 1000 / 60 / 60 / 24 <= 3;
+    case "1_week":
+      return (now - itemDate) / 1000 / 60 / 60 / 24 <= 7;
+    case "1_month":
+      return (now - itemDate) / 1000 / 60 / 60 / 24 <= 30;
+    case "custom": {
+      if (!fromDate || !toDate) return false;
+      const from = new Date(fromDate);
+      const to = new Date(toDate);
+      from.setHours(0, 0, 0, 0);
+      to.setHours(23, 59, 59, 999);
+      return itemDate >= from && itemDate <= to;
+    }
+    default:
+      return true;
+  }
+};
+
 export default function App() {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState([]); // FULL data fetched once
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  
-  // Column filters
+
   const [filters, setFilters] = useState({
     author: "",
     field: "",
     from: "",
     to: "",
-    date: ""
+    date: "all",
   });
 
-  const [customDateFilter, setCustomDateFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const userTimeZone = useUserTimeZone();
 
-  // Generate filter options from data
-  const filterOptions = useMemo(() => {
-    // Get unique authors
-    const authors = [...new Set(data.map(item => item.author).filter(Boolean))]
-      .sort()
-      .map(author => ({ label: author, value: author }));
-
-    // Get unique fields (including special handling for comments and attachments)
-    const fields = new Set();
-    data.forEach(item => {
-      if (item.type === "changelog" && item.field) {
-        fields.add(item.field);
-      } else if (item.type === "comment") {
-        fields.add("Comment");
-      } else if (item.type === "attachment" && item.filename) {
-        fields.add(item.filename);
-      }
-    });
-    const fieldOptions = [...fields].sort().map(field => ({ label: field, value: field }));
-
-    // Date filter options
-    const dateOptions = [
-      { label: "Just now", value: "just_now" },
-      { label: "5 minutes ago", value: "5_minutes" },
-      { label: "2 hours ago", value: "2_hours" },
-      { label: "3 days ago", value: "3_days" },
-      { label: "1 week ago", value: "1_week" },
-      { label: "1 month ago", value: "1_month" },
-      { label: "Custom", value: "custom" }
-    ];
-
-    return {
-      authors,
-      fields: fieldOptions,
-      dates: dateOptions
-    };
-  }, [data]);
-
-  // Helper function to check if an item matches the date filter
-  const matchesDateFilter = (item, filterValue) => {
-    if (!filterValue || filterValue === "") return true;
-    
-    const itemDate = new Date(item.date || item.created);
-    const now = new Date();
-    const diffInMs = now - itemDate;
-    
-    switch (filterValue) {
-      case "just_now":
-        return diffInMs < 60000; // Less than 1 minute
-      case "5_minutes":
-        return diffInMs < 300000; // Less than 5 minutes
-      case "2_hours":
-        return diffInMs < 7200000; // Less than 2 hours
-      case "3_days":
-        return diffInMs < 259200000; // Less than 3 days
-      case "1_week":
-        return diffInMs < 604800000; // Less than 1 week
-      case "1_month":
-        return diffInMs < 2592000000; // Less than 30 days
-      case "custom":
-        // For custom, we'll use the custom date filter text input
-        return customDateFilter === "" || formatDate(item.date || item.created, userTimeZone).toLowerCase().includes(customDateFilter.toLowerCase());
-      default:
-        return true;
-    }
-  };
-
-  // Filter data based on current filters
-  const filteredData = useMemo(() => {
-    return data.filter(item => {
-      // Author filter
-      const authorMatch = filters.author === "" || (item.author || "").toLowerCase().includes(filters.author.toLowerCase());
-      
-      // Field filter - handle different types
-      let fieldMatch = true;
-      if (filters.field !== "") {
-        if (item.type === "changelog") {
-          fieldMatch = (item.field || "").toLowerCase().includes(filters.field.toLowerCase());
-        } else if (item.type === "comment") {
-          fieldMatch = "comment".toLowerCase().includes(filters.field.toLowerCase());
-        } else if (item.type === "attachment") {
-          fieldMatch = (item.filename || "").toLowerCase().includes(filters.field.toLowerCase());
-        }
-      }
-      
-      // From and To filters
-      const fromMatch = filters.from === "" || (item.from || "").toLowerCase().includes(filters.from.toLowerCase());
-      const toMatch = filters.to === "" || 
-        (item.type === "changelog" ? (item.to || "").toLowerCase().includes(filters.to.toLowerCase()) :
-         item.type === "attachment" ? `${Math.round(item.size / 1024)}KB`.toLowerCase().includes(filters.to.toLowerCase()) :
-         item.type === "comment" ? (item.content || "").toLowerCase().includes(filters.to.toLowerCase()) : true);
-      
-      // Date filter
-      const dateMatch = filters.date === "" || matchesDateFilter(item, filters.date);
-      
-      return authorMatch && fieldMatch && fromMatch && toMatch && dateMatch;
-    });
-  }, [data, filters, userTimeZone, customDateFilter]);
-
-  // Sort filtered data by date (newest first)
-  const sortedData = useMemo(() => {
-    return [...filteredData].sort(
-      (a, b) => new Date(b.date || b.created) - new Date(a.date || a.created)
-    );
-  }, [filteredData]);
-
-  // Paginated data
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return sortedData.slice(startIndex, startIndex + pageSize);
-  }, [sortedData, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(sortedData.length / pageSize);
-
+  // Fetch all data ONCE when component mounts or filters.date/fromDate/toDate changes (optional to refetch on date filter)
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        console.log("Fetching data...");
-        const result = await invoke(currentDev, {
-          filter: "all" // Always fetch all data, filter on frontend
-        });
-        
-        console.log("Result received:", result);
-        
+        // Fetch ALL data once (no filter sent)
+        const result = await invoke(currentDev, {}); 
         if (result && result.error) {
           setError(result.error);
           setData([]);
           return;
         }
-
-        if (result && typeof result === "object") {
-          const allActivities = [
-            ...(result.changelog || []),
-            ...(result.comments || []),
-            ...(result.attachments || []),
-          ];
-          
-          // Deduplicate
-          const seen = new Set();
-          const uniqueActivities = allActivities.filter((item) => {
-            let key = `${item.type}-${item.date || item.created}`;
-            if (item.type === "changelog") {
-              key += `-${item.field || ""}-${item.from || ""}-${item.to || ""}`;
-            } else if (item.type === "attachment") {
-              key += `-${item.filename || ""}`;
-            } else if (item.type === "comment") {
-              key += `-${item.content || ""}`;
-            }
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
-          setData(uniqueActivities);
-        } else {
-          setData(result || []);
-        }
+        const uniqueActivities = mergeUniqueActivities(result);
+        setData(uniqueActivities);
       } catch (err) {
-        console.error("Error fetching data:", err);
         setError(err.message || "Unknown error");
         setData([]);
       } finally {
         setLoading(false);
       }
     };
-    
     fetchData();
-    // Removed automatic refresh - now using manual refresh button
-  }, []);
+  }, []); // no dependency removes re-fetch on filter change!
 
-  // Manual refresh function
-  const handleManualRefresh = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      console.log("Manual refresh triggered...");
-      const result = await invoke(currentDev, {
-        filter: "all"
-      });
-      
-      console.log("Result received:", result);
-      
-      if (result && result.error) {
-        setError(result.error);
-        setData([]);
-        return;
-      }
+  const filterOptions = useMemo(() => ({
+  authors: Array.from(new Set(data.map(d => d.author))).map(a => ({ label: a, value: a })),
+  fields: Array.from(new Set(
+    data.map(d => d.type === 'changelog' ? d.field :
+                 d.type === 'comment' ? 'Comment' :
+                 d.type === 'attachment' ? d.filename : '')
+  )).map(f => ({ label: f, value: f })),
+  dates: [
+    { label: "All", value: "all" },
+    { label: "Just now", value: "just_now" },
+    { label: "Last 5 minutes", value: "5_minutes" },
+    { label: "Last 2 hours", value: "2_hours" },
+    { label: "Last 3 days", value: "3_days" },
+    { label: "Last 1 week", value: "1_week" },
+    { label: "Last 1 month", value: "1_month" },
+    { label: "Custom", value: "custom" },
+  ],
+}), [data]);
 
-      if (result && typeof result === "object") {
-        const allActivities = [
-          ...(result.changelog || []),
-          ...(result.comments || []),
-          ...(result.attachments || []),
-        ];
-        
-        // Deduplicate
-        const seen = new Set();
-        const uniqueActivities = allActivities.filter((item) => {
-          let key = `${item.type}-${item.date || item.created}`;
-          if (item.type === "changelog") {
-            key += `-${item.field || ""}-${item.from || ""}-${item.to || ""}`;
-          } else if (item.type === "attachment") {
-            key += `-${item.filename || ""}`;
-          } else if (item.type === "comment") {
-            key += `-${item.content || ""}`;
-          }
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        setData(uniqueActivities);
-      } else {
-        setData(result || []);
-      }
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(err.message || "Unknown error");
-      setData([]);
-    } finally {
-      setLoading(false);
+  // FILTER DATA LOCALLY using useMemo - this is the main change from your previous code
+  const filteredData = useMemo(() => {
+  return data.filter(item => {
+    // Author filter (case-insensitive)
+    if (filters.author && !(item.author || "").toLowerCase().includes(filters.author.toLowerCase())) {
+      return false;
     }
-  };
 
-  // Reset to first page when filters change
+    // Field filter
+    if (filters.field !== "") {
+      if (item.type === "changelog" && !(item.field || "").toLowerCase().includes(filters.field.toLowerCase())) {
+        return false;
+      } else if (item.type === "comment" && !"comment".includes(filters.field.toLowerCase())) {
+        return false;
+      } else if (item.type === "attachment" && !(item.filename || "").toLowerCase().includes(filters.field.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // From filter
+    if (filters.from && !(item.from || "").toLowerCase().includes(filters.from.toLowerCase())) {
+      return false;
+    }
+
+    // To filter
+    if (filters.to !== "") {
+      if (item.type === "changelog" && !(item.to || "").toLowerCase().includes(filters.to.toLowerCase())) {
+        return false;
+      } else if (item.type === "attachment" && !`${Math.round(item.size / 1024)}kb`.toLowerCase().includes(filters.to.toLowerCase())) {
+        return false;
+      } else if (item.type === "comment" && !(item.content || "").toLowerCase().includes(filters.to.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // Date filter
+    if (!matchesDateFilter(item, filters.date, fromDate, toDate)) {
+      return false;
+    }
+
+    return true;
+  });
+}, [data, filters, fromDate, toDate]);
+
+  // Sort then paginate filtered data
+  const sortedData = useMemo(() => {
+    return [...filteredData].sort(
+      (a, b) => new Date(b.date || b.created) - new Date(a.date || a.created)
+    );
+  }, [filteredData]);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedData.slice(start, start + pageSize);
+  }, [sortedData, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(sortedData.length / pageSize);
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters]);
+  }, [pageSize, filteredData.length]);
 
-  // Update a specific filter
+  const handleManualRefresh = async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const result = await invoke(currentDev, {}); // fetch all data
+    if (result?.error) {
+      setError(result.error);
+      setData([]);
+      return;
+    }
+    setData(mergeUniqueActivities(result));
+  } catch (err) {
+    setError(err.message);
+    setData([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+          
+useEffect(() => {
+    if (filters.date === "custom" && fromDate && toDate) {
+      setCurrentPage(1);
+    }
+  }, [filters.date, fromDate, toDate]);
+
   const updateFilter = (column, value) => {
-    setFilters(prev => ({ ...prev, [column]: value }));
+    setFilters((prev) => ({ ...prev, [column]: value }));
   };
 
-  // Clear all filters
   const clearFilters = () => {
     setFilters({
       author: "",
       field: "",
       from: "",
       to: "",
-      date: ""
+      date: "all",
     });
-    setCustomDateFilter("");
+    setFromDate("");
+    setToDate("");
   };
-
-  // If there's an access error, show access denied message
+  const hasActiveFilters =
+    !!(
+      filters.author ||
+      filters.field ||
+      filters.from ||
+      filters.to ||
+      filters.date !== "all" ||
+      fromDate ||
+      toDate
+    );
   if (error && error.includes("Access denied")) {
     return (
       <div style={{ padding: "16px" }}>
@@ -357,7 +331,6 @@ export default function App() {
     );
   }
 
-  // Define table columns
   const head = {
     cells: [
       {
@@ -414,7 +387,7 @@ export default function App() {
           <div>
             <strong>From</strong>
             <div style={{ marginTop: "4px" }}>
-              <Textfield
+              <TextField
                 placeholder="Filter from value..."
                 value={filters.from}
                 onChange={(e) => updateFilter("from", e.target.value)}
@@ -442,7 +415,7 @@ export default function App() {
           <div>
             <strong>To</strong>
             <div style={{ marginTop: "4px" }}>
-              <Textfield
+              <TextField
                 placeholder="Filter to value..."
                 value={filters.to}
                 onChange={(e) => updateFilter("to", e.target.value)}
@@ -474,7 +447,14 @@ export default function App() {
                 placeholder="Filter by time..."
                 options={filterOptions.dates}
                 value={filterOptions.dates.find(opt => opt.value === filters.date) || null}
-                onChange={(option) => updateFilter("date", option ? option.value : "")}
+                onChange={(option) => {
+                const val = option?.value || "";
+                updateFilter("date", val);
+                if (val !== "custom") {
+                setFromDate("");
+                setToDate("");
+                }
+                }}
                 isClearable
                 isSearchable={false}
                 styles={{
@@ -482,17 +462,34 @@ export default function App() {
                   control: (provided) => ({ ...provided, minHeight: "32px" })
                 }}
               />
-              {filters.date === "custom" && (
-                <div style={{ marginTop: "4px" }}>
-                  <Textfield
-                    placeholder="Enter custom date filter..."
-                    value={customDateFilter}
-                    onChange={(e) => setCustomDateFilter(e.target.value)}
-                    isCompact
+            </div>
+
+            {filters.date === "custom" && (
+              <div style={{ display: "flex", gap: "16px", marginTop: "8px" }}>
+                <div>
+                  <strong>From Date</strong>
+                  <DatePicker
+                  value={fromDate || ""}
+                  onChange={(date) => {
+                    setFromDate(date || "");
+                  }}
+                  width="180px"
+                  isClearable
                   />
                 </div>
-              )}
-            </div>
+                <div>
+                  <strong>To Date</strong>
+                  <DatePicker
+                  value={toDate || ""}
+                  onChange={(date) => {
+                    setToDate(date || "");
+                  }}
+                  width="180px"
+                  isClearable
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ),
         isSortable: false,
@@ -501,14 +498,10 @@ export default function App() {
     ]
   };
 
-  // Create table rows
   const rows = paginatedData.map((entry, index) => ({
     key: `row-${index}`,
     cells: [
-      {
-        key: "author",
-        content: entry.author || "-"
-      },
+      { key: "author", content: entry.author || "-" },
       {
         key: "field",
         content: (
@@ -521,30 +514,21 @@ export default function App() {
                 {entry.field || "-"}
               </>
             )}
-            {entry.type === "comment" && (
-              <span>💬 Comment</span>
-            )}
+            {entry.type === "comment" && <span>💬 Comment</span>}
             {entry.type === "attachment" && entry.filename}
           </div>
         )
       },
-      {
-        key: "from",
-        content: entry.type === "changelog" ? (entry.from || "-") : "-"
-      },
+      { key: "from", content: entry.type === "changelog" ? (entry.from || "-") : "-" },
       {
         key: "to",
-        content: entry.type === "changelog" 
-          ? (entry.to || "-") 
-          : entry.type === "attachment" 
-            ? `${Math.round(entry.size / 1024)}KB` 
+        content: entry.type === "changelog"
+          ? (entry.to || "-")
+          : entry.type === "attachment"
+            ? `${Math.round(entry.size / 1024)}KB`
             : entry.type === "comment"
-            ? (
-              <span title={entry.content}>
-                {entry.content || "-"}
-              </span>
-            )
-            : "-"
+              ? <span title={entry.content}>{entry.content || "-"}</span>
+              : "-"
       },
       {
         key: "date",
@@ -562,13 +546,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        alignItems: "center", 
-        minHeight: "200px",
-        flexDirection: "column"
-      }}>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px", flexDirection: "column" }}>
         <Spinner size="large" />
         <p style={{ marginTop: "16px", color: "#6b778c" }}>Loading change log...</p>
       </div>
@@ -586,31 +564,13 @@ export default function App() {
     );
   }
 
-  const hasActiveFilters = Object.values(filters).some(filter => filter !== "") || customDateFilter !== "";
-
   return (
     <div style={{ padding: "16px" }}>
-      {/* Header with actions */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center", 
-        marginBottom: "16px",
-        flexWrap: "wrap",
-        gap: "8px"
-      }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <h3 style={{ margin: 0, color: "#172b4d" }}>
-              Issue Change Log
-            </h3>
-            <Button
-              appearance="primary"
-              onClick={handleManualRefresh}
-              isLoading={loading}
-              spacing="compact"
-              title="Refresh data"
-            >
+            <h3 style={{ margin: 0, color: "#172b4d" }}>Issue Change Log</h3>
+            <Button appearance="primary" onClick={handleManualRefresh} isLoading={loading} spacing="compact" title="Refresh data">
               {loading ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
@@ -619,42 +579,28 @@ export default function App() {
             {hasActiveFilters && ` (${filteredData.length} filtered)`}
           </p>
         </div>
-        
+
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           {hasActiveFilters && (
-            <Button 
-              appearance="subtle" 
-              onClick={clearFilters}
-            >
+            <Button appearance="subtle" onClick={clearFilters}>
               Clear Filters
             </Button>
           )}
-          <Button
-            appearance="primary"
-            onClick={() => exportCSV(sortedData, userTimeZone)}
-            isDisabled={sortedData.length === 0}
-          >
+          <Button appearance="primary" onClick={() => exportCSV(sortedData, userTimeZone)} isDisabled={sortedData.length === 0}>
             Export CSV
           </Button>
         </div>
       </div>
 
-      {/* Table */}
-      <DynamicTable
-        head={head}
-        rows={rows}
-        rowsPerPage={pageSize}
-        defaultPage={1}
-        loadingSpinnerSize="large"
-        isLoading={loading}
+      <DynamicTable head={head} rows={rows} rowsPerPage={pageSize} defaultPage={1}
         emptyView={
           <div style={{ textAlign: "center", padding: "32px" }}>
             <p style={{ fontSize: "16px", margin: "0 0 8px 0", color: "#6b778c" }}>
               {hasActiveFilters ? "No activities match your current filters" : "No activities found"}
             </p>
             <p style={{ fontSize: "14px", margin: "0 0 16px 0", color: "#6b778c" }}>
-              {hasActiveFilters 
-                ? "Try adjusting or clearing your filters to see more results." 
+              {hasActiveFilters
+                ? "Try adjusting or clearing your filters to see more results."
                 : "There are no change log entries for this issue yet."
               }
             </p>
@@ -667,16 +613,8 @@ export default function App() {
         }
       />
 
-      {/* Custom Pagination */}
       {totalPages > 1 && (
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          marginTop: "16px",
-          flexWrap: "wrap",
-          gap: "16px"
-        }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", flexWrap: "wrap", gap: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "14px", color: "#6b778c" }}>Items per page:</span>
             <Select
@@ -692,9 +630,7 @@ export default function App() {
                 setCurrentPage(1);
               }}
               isSearchable={false}
-              styles={{
-                container: (provided) => ({ ...provided, minWidth: "80px" })
-              }}
+              styles={{ container: (provided) => ({ ...provided, minWidth: "80px" }) }}
             />
           </div>
 

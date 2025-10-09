@@ -33,7 +33,7 @@ const checkSiteAdminAccess = async () => {
       .asUser()
       .requestJira(route`/rest/api/3/myself?expand=groups`);
 
-    if (!res.ok) return false; 
+    if (!res.ok) return false;
 
     const user = await res.json();
 
@@ -75,25 +75,27 @@ const getProjectKeyFromIssue = async (issueKey) => {
  * Parse a relative time filter string to a Date cutoff.
  */
 const parseRelativeTime = (filterValue) => {
+  if (!filterValue || filterValue === "all") return null;
+
   const now = new Date();
+
   switch (filterValue) {
-    case "24h":
-      return new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    case "7d":
-      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    case "30d":
-      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    case "6m": {
-      const sixMonthsAgo = new Date(now);
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      return sixMonthsAgo;
-    }
-    case "1y": {
-      const oneYearAgo = new Date(now);
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-      return oneYearAgo;
-    }
-    case "all":
+    case "just_now":
+      return new Date(now.getTime() - 60 * 1000); // 1 minute ago
+    case "5_minutes":
+      return new Date(now.getTime() - 5 * 60 * 1000); // 5 minutes ago
+    case "2_hours":
+      return new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
+    case "3_days":
+      return new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000); // 3 days ago
+    case "1_week":
+      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 1 week ago
+    case "1_month":
+      const oneMonthAgo = new Date(now);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      return oneMonthAgo;
+    case "custom":
+      return null; // handled separately in frontend using fromDate/toDate
     default:
       return null;
   }
@@ -102,7 +104,7 @@ const parseRelativeTime = (filterValue) => {
 /**
  * Fetch comments for an issue
  */
-const fetchIssueComments = async (issueKey, cutoffDate) => {
+const fetchIssueComments = async (issueKey, cutoffDate, filterValue, fromDate, toDate) => {
   try {
     const res = await api
       .asUser()
@@ -115,13 +117,19 @@ const fetchIssueComments = async (issueKey, cutoffDate) => {
 
     const json = await res.json();
     const allComments = json.comments || [];
-
-    return allComments
-      .filter((comment) => {
-        if (!cutoffDate) return true;
-        return new Date(comment.created) >= cutoffDate;
-      })
-      .map((comment) => ({
+    // In fetchIssueComments:
+return allComments.filter((comment) => {
+  const commentDate = new Date(comment.created);
+  console.log(`Comment date: ${commentDate}, fromDate: ${fromDate}, toDate: ${toDate}`);
+  if (filterValue === "custom") {
+    if (fromDate && commentDate < fromDate) return false;
+    if (toDate && commentDate > toDate) return false;
+    return true;
+  }
+  if (!cutoffDate) return true;
+  return commentDate >= cutoffDate;
+})
+     .map((comment) => ({
         issueKey,
         type: "comment",
         author: comment.author?.displayName || "Unknown",
@@ -144,7 +152,7 @@ const fetchIssueComments = async (issueKey, cutoffDate) => {
 /**
  * Fetch attachments for an issue
  */
-const fetchIssueAttachments = async (issueKey, cutoffDate) => {
+const fetchIssueAttachments = async (issueKey, cutoffDate, filterValue, fromDate, toDate) => {
   try {
     const res = await api
       .asUser()
@@ -157,13 +165,18 @@ const fetchIssueAttachments = async (issueKey, cutoffDate) => {
 
     const json = await res.json();
     const allAttachments = json.fields?.attachment || [];
-
-    return allAttachments
-      .filter((attachment) => {
-        if (!cutoffDate) return true;
-        return new Date(attachment.created) >= cutoffDate;
-      })
-      .map((attachment) => ({
+    return allAttachments.filter((attachment) => {
+      const attachmentDate = new Date(attachment.created);
+      console.log(`Attachment date: ${attachmentDate}, fromDate: ${fromDate}, toDate: ${toDate}`);
+      if (filterValue === "custom") {
+        if (fromDate && attachmentDate < fromDate) return false;
+        if (toDate && attachmentDate > toDate) return false;
+        return true;
+      }
+      if (!cutoffDate) return true; 
+      return attachmentDate >= cutoffDate;
+    })
+       .map((attachment) => ({
         issueKey,
         type: "attachment",
         author: attachment.author?.displayName || "Unknown",
@@ -183,9 +196,14 @@ const fetchIssueAttachments = async (issueKey, cutoffDate) => {
 /**
  * Main resolver function
  */
-const devSuvitha = async (req) => {
+const devSahanaa = async (req) => {
   try {
     console.log("Request received:", JSON.stringify(req, null, 2));
+    const fromDateReq = req.fromDate || req.payload?.fromDate;
+    const toDateReq = req.toDate || req.payload?.toDate;
+    const fromDate = fromDateReq ? new Date(fromDateReq) : null;
+    const toDate = toDateReq ? new Date(toDateReq) : null;
+    if (toDate) toDate.setHours(23, 59, 59, 999); 
 
     // Determine issue keys
     let issueKeys = req.issueKeys || req.payload?.issueKeys;
@@ -195,7 +213,7 @@ const devSuvitha = async (req) => {
       if (contextKey) {
         issueKeys = [contextKey];
       } else {
-        const singleKey = req.issueKey || req.payload?.issueKey || "KC-24";
+        const singleKey = req.issueKey || req.payload?.issueKey || "ECWD-10";
         issueKeys = [singleKey];
       }
     }
@@ -237,6 +255,7 @@ const devSuvitha = async (req) => {
     const rawFilter = req.filter || req.payload?.filter || "all";
     const filterValue =
       typeof rawFilter === "string" ? rawFilter : rawFilter?.value || "all";
+      console.log(`Filtering with filterValue=${filterValue}, fromDate=${fromDate}, toDate=${toDate}`);
     const cutoffDate = parseRelativeTime(filterValue);
 
     let allChangelog = [];
@@ -257,26 +276,36 @@ const devSuvitha = async (req) => {
       const allChanges = json.changelog?.histories || [];
 
       // Filter changelog entries
-      const changelogEntries = allChanges
-        .filter((entry) => {
-          if (!cutoffDate) return true;
-          return new Date(entry.created) >= cutoffDate;
-        })
-        .flatMap((entry) =>
-          entry.items.map((item) => ({
-            issueKey,
-            type: "changelog",
-            author: entry.author?.displayName || "Unknown",
-            field: item.field,
-            from: item.fromString || "-",
-            to: item.toString || "-",
-            date: new Date(entry.created).toISOString(),
-          }))
-        );
+const changelogEntries = allChanges
+  .filter((entry) => {
+    const entryDate = new Date(entry.created);
+    if (filterValue === "custom") {
+      if (fromDate && toDate) return entryDate >= fromDate && entryDate <= toDate;
+      if (fromDate) return entryDate >= fromDate;
+      if (toDate) return entryDate <= toDate;
+      return true;
+    } else {
+      if (!cutoffDate) return true;
+      return entryDate >= cutoffDate;
+    }
+  })
+  .flatMap((entry) =>
+    entry.items.map((item) => ({
+      issueKey,
+      type: "changelog",
+      author: entry.author?.displayName || "Unknown",
+      field: item.field,
+      from: item.fromString || "-",
+      to: item.toString || "-",
+      date: new Date(entry.created).toISOString(),
+    }))
+  );
+
 
       // Fetch comments + attachments
-      const comments = await fetchIssueComments(issueKey, cutoffDate);
-      const attachments = await fetchIssueAttachments(issueKey, cutoffDate);
+      const comments = await fetchIssueComments(issueKey, cutoffDate, filterValue, fromDate, toDate);
+      const attachments = await fetchIssueAttachments(issueKey, cutoffDate, filterValue, fromDate, toDate);
+
 
       allChangelog.push(...changelogEntries);
       allComments.push(...comments);
@@ -444,7 +473,8 @@ const getAccessInfo = async (req) => {
  * Register resolver
  */
 const resolver = new Resolver();
-resolver.define("devSuvitha", devSuvitha);
+resolver.define("resolver", devSahanaa);
+resolver.define("devSahanaa", devSahanaa);
 resolver.define("getAllowedProjects", getAllowedProjects);
 resolver.define("addAllowedProject", addAllowedProject);
 resolver.define("removeAllowedProject", removeAllowedProject);
