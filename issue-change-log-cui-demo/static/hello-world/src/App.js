@@ -204,15 +204,13 @@ export default function App() {
   ],
 }), [data]);
 
-  // FILTER DATA LOCALLY using useMemo - this is the main change from your previous code
   const filteredData = useMemo(() => {
   return data.filter(item => {
-    // Author filter (case-insensitive)
+    
     if (filters.author && !(item.author || "").toLowerCase().includes(filters.author.toLowerCase())) {
       return false;
     }
 
-    // Field filter
     if (filters.field !== "") {
       if (item.type === "changelog" && !(item.field || "").toLowerCase().includes(filters.field.toLowerCase())) {
         return false;
@@ -223,12 +221,10 @@ export default function App() {
       }
     }
 
-    // From filter
     if (filters.from && !(item.from || "").toLowerCase().includes(filters.from.toLowerCase())) {
       return false;
     }
 
-    // To filter
     if (filters.to !== "") {
       if (item.type === "changelog" && !(item.to || "").toLowerCase().includes(filters.to.toLowerCase())) {
         return false;
@@ -239,7 +235,6 @@ export default function App() {
       }
     }
 
-    // Date filter
     if (!matchesDateFilter(item, filters.date, fromDate, toDate)) {
       return false;
     }
@@ -248,7 +243,6 @@ export default function App() {
   });
 }, [data, filters, fromDate, toDate]);
 
-  // Sort then paginate filtered data
   const sortedData = useMemo(() => {
     return [...filteredData].sort(
       (a, b) => new Date(b.date || b.created) - new Date(a.date || a.created)
@@ -269,7 +263,7 @@ export default function App() {
   setLoading(true);
   setError(null);
   try {
-    const result = await invoke(currentDev, {}); // fetch all data
+    const result = await invoke(currentDev, {}); 
     if (result?.error) {
       setError(result.error);
       setData([]);

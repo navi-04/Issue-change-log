@@ -2,14 +2,11 @@ import Resolver from "@forge/resolver";
 import api, { route } from "@forge/api";
 import { storage } from "@forge/api";
 
-/**
- * Check if a project has access to the app
- */
+
 const checkProjectAccess = async (projectKey) => {
   try {
     const allowedProjects = (await storage.get("allowedProjects")) || [];
 
-    // If no projects are configured yet, allow access (for initial setup)
     if (allowedProjects.length === 0) {
       console.log(
         "No projects configured yet, allowing access for initial setup"
@@ -24,9 +21,6 @@ const checkProjectAccess = async (projectKey) => {
   }
 };
 
-/**
- * Check if current user is a site admin
- */
 const checkSiteAdminAccess = async () => {
   try {
     const res = await api
@@ -37,12 +31,11 @@ const checkSiteAdminAccess = async () => {
 
     const user = await res.json();
 
-    // Extract all group names
     const groups = user.groups?.items || [];
 
     console.log("User:", user.displayName);
     console.log("Groups:", groups);
-    // Check if user is in site-admins group or jira-administrators
+
     return groups.some(
       (group) =>
         group.name === "site-admins" || group.name === "jira-administrators" || group.name === "org-admins"
@@ -53,9 +46,6 @@ const checkSiteAdminAccess = async () => {
   }
 };
 
-/**
- * Get project key from issue key
- */
 const getProjectKeyFromIssue = async (issueKey) => {
   try {
     const res = await api
@@ -71,9 +61,6 @@ const getProjectKeyFromIssue = async (issueKey) => {
   }
 };
 
-/**
- * Parse a relative time filter string to a Date cutoff.
- */
 const parseRelativeTime = (filterValue) => {
   if (!filterValue || filterValue === "all") return null;
 
