@@ -336,7 +336,44 @@ const getAllowedProjects = async (req) => {
     }
 
     const allowedProjects = (await storage.get("allowedProjects")) || [];
-    return { allowedProjects };
+    let allowedProjectsData = (await storage.get("allowedProjectsData")) || {};
+    
+    // Migration: Populate metadata for existing projects without it
+    let needsUpdate = false;
+    for (const projectKey of allowedProjects) {
+      if (!allowedProjectsData[projectKey]) {
+        try {
+          const projectResponse = await api.asUser().requestJira(route`/rest/api/3/project/${projectKey}`);
+          if (projectResponse.ok) {
+            const projectDetails = await projectResponse.json();
+            allowedProjectsData[projectKey] = {
+              key: projectKey,
+              name: projectDetails.name || projectKey,
+              id: projectDetails.id || projectKey,
+              dateAdded: new Date().toISOString()
+            };
+            needsUpdate = true;
+          }
+        } catch (error) {
+          console.error(`Error fetching details for project ${projectKey}:`, error);
+          // Set minimal data if fetch fails
+          allowedProjectsData[projectKey] = {
+            key: projectKey,
+            name: projectKey,
+            id: "N/A",
+            dateAdded: new Date().toISOString()
+          };
+          needsUpdate = true;
+        }
+      }
+    }
+    
+    // Save updated metadata if migration occurred
+    if (needsUpdate) {
+      await storage.set("allowedProjectsData", allowedProjectsData);
+    }
+    
+    return { allowedProjects, allowedProjectsData };
   } catch (error) {
     console.error("Error getting allowed projects:", error);
     return { error: error.message };
@@ -358,13 +395,35 @@ const addAllowedProject = async (req) => {
       return { error: "Project key is required" };
     }
 
-    const allowedProjects = (await storage.get("allowedProjects")) || [];
-    if (!allowedProjects.includes(projectKey)) {
-      allowedProjects.push(projectKey);
+    // Get or initialize projects with metadata
+    const allowedProjectsData = (await storage.get("allowedProjectsData")) || {};
+    
+    if (!allowedProjectsData[projectKey]) {
+      // Fetch project details
+      const projectResponse = await api.asUser().requestJira(route`/rest/api/3/project/${projectKey}`);
+      
+      if (!projectResponse.ok) {
+        return { error: "Failed to fetch project details" };
+      }
+      
+      const projectDetails = await projectResponse.json();
+      
+      allowedProjectsData[projectKey] = {
+        key: projectKey,
+        name: projectDetails.name || projectKey,
+        id: projectDetails.id || projectKey,
+        dateAdded: new Date().toISOString()
+      };
+      
+      await storage.set("allowedProjectsData", allowedProjectsData);
+      
+      // Also maintain the simple array for backward compatibility
+      const allowedProjects = Object.keys(allowedProjectsData);
       await storage.set("allowedProjects", allowedProjects);
     }
 
-    return { success: true, allowedProjects };
+    const allowedProjects = Object.keys(allowedProjectsData);
+    return { success: true, allowedProjects, allowedProjectsData };
   } catch (error) {
     console.error("Error adding allowed project:", error);
     return { error: error.message };
@@ -386,11 +445,16 @@ const removeAllowedProject = async (req) => {
       return { error: "Project key is required" };
     }
 
-    const allowedProjects = (await storage.get("allowedProjects")) || [];
-    const updatedProjects = allowedProjects.filter((key) => key !== projectKey);
-    await storage.set("allowedProjects", updatedProjects);
+    // Remove from metadata
+    const allowedProjectsData = (await storage.get("allowedProjectsData")) || {};
+    delete allowedProjectsData[projectKey];
+    await storage.set("allowedProjectsData", allowedProjectsData);
 
-    return { success: true, allowedProjects: updatedProjects };
+    // Update the simple array
+    const allowedProjects = Object.keys(allowedProjectsData);
+    await storage.set("allowedProjects", allowedProjects);
+
+    return { success: true, allowedProjects, allowedProjectsData };
   } catch (error) {
     console.error("Error removing allowed project:", error);
     return { error: error.message };
@@ -417,6 +481,7 @@ const getAllProjects = async (req) => {
       projects: projects.map((p) => ({
         key: p.key,
         name: p.name,
+        id: p.id,
         projectTypeKey: p.projectTypeKey,
       })),
     };

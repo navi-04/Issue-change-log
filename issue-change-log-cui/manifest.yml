@@ -29,15 +29,15 @@ resources:
   - key: main
     path: static/hello-world/build
     tunnel:
-      port: 3000
+      port: 3002
   - key: admin
     path: static/admin/build
     tunnel:
-      port: 3001
+      port: 3000
   - key: project-settings
     path: static/project-settings/build
-    # tunnel:
-    #   port: 3002
+    tunnel:
+      port: 3001
 permissions:
   scopes:
     - read:jira-work
