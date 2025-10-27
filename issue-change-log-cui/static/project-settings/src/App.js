@@ -10,10 +10,9 @@ export default function ProjectSettings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
-  const [projectData, setProjectData] = useState(null);
+  const [projectName, setProjectName] = useState("");
   const [isAppEnabled, setIsAppEnabled] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
-  const [isProjectAdmin, setIsProjectAdmin] = useState(false);
 
   useEffect(() => {
     fetchProjectSettings();
@@ -24,33 +23,21 @@ export default function ProjectSettings() {
       setLoading(true);
       setError(null);
       
-      console.log("Fetching project settings...");
       const result = await invoke("getProjectSettings");
-      console.log("Project settings result:", result);
       
       if (result.success) {
-        setProjectData(result.project);
+        setProjectName(result.project?.name || "Unknown Project");
         setHasPermission(result.hasPermission);
         setIsAppEnabled(result.isEnabled || false);
-        setIsProjectAdmin(result.isProjectAdmin || false);
-        console.log("Settings loaded successfully:", {
-          project: result.project,
-          hasPermission: result.hasPermission,
-          isEnabled: result.isEnabled,
-          isProjectAdmin: result.isProjectAdmin
-        });
       } else {
-        console.error("Failed to load settings:", result);
-        setError(result.message || "Failed to load project settings");
-        
-        // Show debug information if available
-        if (result.debug) {
-          console.log("Debug info:", result.debug);
+        // Even if not successful, try to get project name if available
+        if (result.project?.name) {
+          setProjectName(result.project.name);
         }
+        setError(result.message || "Failed to load project settings");
       }
     } catch (err) {
-      console.error("Error fetching project settings:", err);
-      setError(`Error: ${err.message || "An error occurred while fetching project settings"}`);
+      setError(`Error: ${err.message || "An error occurred"}`);
     } finally {
       setLoading(false);
     }
@@ -60,30 +47,23 @@ export default function ProjectSettings() {
     try {
       setLoading(true);
       setError(null);
-      setMessage("");
       
       const newState = !isAppEnabled;
       const result = await invoke("toggleProjectApp", { enabled: newState });
       
       if (result.success) {
         setIsAppEnabled(newState);
-        setMessage(
-          newState 
-            ? "Issue ChangeLog app has been enabled for this project" 
-            : "Issue ChangeLog app has been disabled for this project"
-        );
       } else {
-        setError(result.message || "Failed to update app settings");
+        setError(result.message || "Failed to update settings");
       }
     } catch (err) {
-      console.error("Error updating app settings:", err);
-      setError(err.message || "An error occurred while updating settings");
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && !projectData) {
+  if (loading && !projectName) {
     return (
       <div style={{ 
         display: "flex", 
@@ -93,7 +73,7 @@ export default function ProjectSettings() {
         flexDirection: "column"
       }}>
         <Spinner size="large" />
-        <p style={{ marginTop: "16px", color: "#6b778c" }}>Loading project settings...</p>
+        <p style={{ marginTop: "16px", color: "#6b778c" }}>Loading...</p>
       </div>
     );
   }
@@ -102,7 +82,7 @@ export default function ProjectSettings() {
     return (
       <div style={{ padding: "24px" }}>
         <Banner appearance="error">
-          <strong>Error loading project settings</strong>
+          <strong>Error</strong>
           <p>{error}</p>
         </Banner>
         <div style={{ marginTop: "16px" }}>
@@ -116,30 +96,11 @@ export default function ProjectSettings() {
 
   if (!hasPermission) {
     return (
-      <div style={{ padding: "24px" }}>
-        <Banner appearance="warning">
-          <strong>App Not Authorized for This Project</strong>
-          <p>
-            The Issue ChangeLog app has not been authorized for this project by your Jira site administrator.
-            Please contact your site administrator to request access.
-          </p>
-          <div style={{ marginTop: "12px" }}>
-            <p style={{ fontSize: "14px", margin: 0 }}>
-              Site administrators can manage app access in <strong>Jira Settings → Apps → Issue ChangeLog Settings</strong>
-            </p>
-          </div>
-        </Banner>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ 
-      padding: "24px", 
-      maxWidth: "600px", 
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif" 
-    }}>
-      <div style={{ marginBottom: "32px" }}>
+      <div style={{ 
+        padding: "24px", 
+        maxWidth: "600px", 
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif" 
+      }}>
         <h1 style={{ 
           color: "#172b4d", 
           fontSize: "24px", 
@@ -151,54 +112,66 @@ export default function ProjectSettings() {
         <p style={{ 
           color: "#5e6c84", 
           fontSize: "14px", 
-          marginBottom: "8px" 
+          marginBottom: "32px" 
         }}>
-          Configure the Issue ChangeLog app for <strong>{projectData?.name || "this project"}</strong>
+          {projectName}
         </p>
-        <p style={{ 
-          color: "#5e6c84", 
-          fontSize: "12px", 
-          marginBottom: "0" 
+
+        {/* Not Authorized Status */}
+        <div style={{
+          padding: "20px",
+          background: "#fff4e6",
+          border: "1px solid #ffab00",
+          borderRadius: "6px",
+          fontSize: "14px",
+          color: "#974f0c"
         }}>
-          Project Key: {projectData?.key || "N/A"} • {isProjectAdmin ? "You have project administrator permissions" : "Project administrator permissions required"}
-        </p>
+          <strong>⚠ Not Authorized</strong>
+          <p style={{ margin: "8px 0 0 0", fontSize: "13px", lineHeight: "1.5" }}>
+            This project is not authorized to use the Issue ChangeLog app. 
+            Please contact your Jira site administrator to request access.
+          </p>
+        </div>
       </div>
+    );
+  }
 
-      {message && (
-        <div style={{ marginBottom: "24px" }}>
-          <Banner appearance="success">
-            {message}
-          </Banner>
-        </div>
-      )}
+  return (
+    <div style={{ 
+      padding: "24px", 
+      maxWidth: "600px", 
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif" 
+    }}>
+      <h1 style={{ 
+        color: "#172b4d", 
+        fontSize: "24px", 
+        fontWeight: "500", 
+        marginBottom: "8px" 
+      }}>
+        Issue ChangeLog Settings
+      </h1>
+      <p style={{ 
+        color: "#5e6c84", 
+        fontSize: "14px", 
+        marginBottom: "32px" 
+      }}>
+        {projectName}
+      </p>
 
-      {!isProjectAdmin && (
-        <div style={{ marginBottom: "24px" }}>
-          <Banner appearance="warning">
-            <strong>Project Administrator Access Required</strong>
-            <p>
-              You need project administrator permissions to modify these settings. 
-              The current app status is displayed below but cannot be changed.
-            </p>
-          </Banner>
-        </div>
-      )}
-
+      {/* Enable/Disable Toggle */}
       <div style={{
         background: "#f4f5f7",
         border: "1px solid #dfe1e6",
         borderRadius: "8px",
         padding: "24px",
-        marginBottom: "24px",
-        opacity: isProjectAdmin ? 1 : 0.6
+        marginBottom: "16px"
       }}>
         <div style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "16px"
+          justifyContent: "space-between"
         }}>
-          <div>
+          <div style={{ flex: 1 }}>
             <h3 style={{ 
               margin: "0 0 8px 0", 
               color: "#172b4d", 
@@ -212,54 +185,35 @@ export default function ProjectSettings() {
               color: "#5e6c84", 
               fontSize: "14px" 
             }}>
-              Allow users in this project to view issue change logs
+              {isAppEnabled 
+                ? "The app is currently enabled for this project" 
+                : "The app is currently disabled for this project"}
             </p>
           </div>
           <Toggle
             isChecked={isAppEnabled}
             onChange={handleToggleChange}
-            isDisabled={loading || !isProjectAdmin}
+            isDisabled={loading}
             size="large"
           />
         </div>
-
-        <div style={{
-          padding: "16px",
-          background: "#ffffff",
-          borderRadius: "4px",
-          border: "1px solid #dfe1e6"
-        }}>
-          <h4 style={{ 
-            margin: "0 0 8px 0", 
-            color: "#172b4d", 
-            fontSize: "14px",
-            fontWeight: "500" 
-          }}>
-            What this does:
-          </h4>
-          <ul style={{ 
-            margin: 0, 
-            paddingLeft: "20px", 
-            color: "#5e6c84", 
-            fontSize: "12px" 
-          }}>
-            <li>When enabled, users can see the Issue ChangeLog panel in issue detail views</li>
-            <li>Users can view change history, comments, and attachment information</li>
-            <li>When disabled, the Issue ChangeLog panel will not appear for any issues in this project</li>
-            <li>This setting only applies to this specific project</li>
-          </ul>
-        </div>
       </div>
 
+      {/* Authorization Status */}
       <div style={{
         padding: "16px",
-        background: "#e3fcef",
-        border: "1px solid #57d9a3",
-        borderRadius: "4px",
-        fontSize: "12px",
-        color: "#006644"
+        background: isAppEnabled ? "#e3fcef" : "#f4f5f7",
+        border: `1px solid ${isAppEnabled ? "#57d9a3" : "#dfe1e6"}`,
+        borderRadius: "6px",
+        fontSize: "14px",
+        color: isAppEnabled ? "#006644" : "#5e6c84"
       }}>
-        <strong>✓ Authorized:</strong> This project has been authorized by your site administrator to use the Issue ChangeLog app.
+        <strong>{isAppEnabled ? "✓ Authorized & Enabled" : "✓ Authorized"}</strong>
+        <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>
+          {isAppEnabled 
+            ? "This project is authorized and the app is currently enabled."
+            : "This project is authorized. Enable the app above to use it."}
+        </p>
       </div>
     </div>
   );

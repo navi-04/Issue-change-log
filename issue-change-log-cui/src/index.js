@@ -417,6 +417,9 @@ const addAllowedProject = async (req) => {
       
       await storage.set("allowedProjectsData", allowedProjectsData);
       
+      // Initialize project settings with enabled: true by default
+      await storage.set(`project_${projectKey}_settings`, { enabled: true });
+      
       // Also maintain the simple array for backward compatibility
       const allowedProjects = Object.keys(allowedProjectsData);
       await storage.set("allowedProjects", allowedProjects);
@@ -580,24 +583,7 @@ const getProjectSettings = async (req) => {
       };
     }
 
-    // Check if project is allowed by site admin
-    const allowedProjects = (await storage.get("allowedProjects")) || [];
-    const hasPermission = allowedProjects.includes(projectKey);
-    
-    if (!hasPermission) {
-      return {
-        success: true,
-        hasPermission: false,
-        project: { key: projectKey },
-        isEnabled: false
-      };
-    }
-
-    // Check if user is project admin
-    const isProjectAdmin = await checkProjectAdminAccess(projectKey);
-    console.log("Is project admin:", isProjectAdmin);
-
-    // Get project details
+    // Get project details first
     const projectRes = await api.asUser().requestJira(route`/rest/api/3/project/${projectKey}`);
     let projectData = { key: projectKey };
     
@@ -609,6 +595,23 @@ const getProjectSettings = async (req) => {
         projectTypeKey: project.projectTypeKey
       };
     }
+
+    // Check if project is allowed by site admin
+    const allowedProjects = (await storage.get("allowedProjects")) || [];
+    const hasPermission = allowedProjects.includes(projectKey);
+    
+    if (!hasPermission) {
+      return {
+        success: true,
+        hasPermission: false,
+        project: projectData,
+        isEnabled: false
+      };
+    }
+
+    // Check if user is project admin
+    const isProjectAdmin = await checkProjectAdminAccess(projectKey);
+    console.log("Is project admin:", isProjectAdmin);
 
     // Get project-specific app settings
     const projectSettings = (await storage.get(`project_${projectKey}_settings`)) || {};
