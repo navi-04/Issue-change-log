@@ -25,35 +25,6 @@ const checkProjectAccess = async (projectKey) => {
 };
 
 /**
- * Check if current user is a site admin
- */
-const checkSiteAdminAccess = async () => {
-  try {
-    const res = await api
-      .asUser()
-      .requestJira(route`/rest/api/3/myself?expand=groups`);
-
-    if (!res.ok) return false; 
-
-    const user = await res.json();
-
-    // Extract all group names
-    const groups = user.groups?.items || [];
-
-    console.log("User:", user.displayName);
-    console.log("Groups:", groups);
-    // Check if user is in site-admins group or jira-administrators
-    return groups.some(
-      (group) =>
-        group.name === "site-admins" || group.name === "jira-administrators" || group.name === "org-admins"
-    );
-  } catch (error) {
-    console.error("Error checking admin access:", error);
-    return false;
-  }
-};
-
-/**
  * Get project key from issue key
  */
 const getProjectKeyFromIssue = async (issueKey) => {
@@ -210,7 +181,7 @@ const devSuvitha = async (req) => {
       if (!projectKey) {
         console.error(`Could not determine project for issue: ${issueKey}`);
         return {
-          error: "Access denied: Could not determine project",
+          error: "Unable to determine the project for this issue. Please try refreshing the page or contact your administrator if the problem persists.",
           changelog: [],
           comments: [],
           attachments: [],
@@ -224,7 +195,7 @@ const devSuvitha = async (req) => {
       if (!hasAccess) {
         console.log(`Access denied for project: ${projectKey}`);
         return {
-          error: `Access denied: Project ${projectKey} is not authorized to use this app`,
+          error: `This project is not authorized to use the Issue Change Log app. Please contact your Jira administrator to grant access for this project.`,
           changelog: [],
           comments: [],
           attachments: [],
@@ -239,7 +210,7 @@ const devSuvitha = async (req) => {
       if (!isProjectAppEnabled) {
         console.log(`App disabled for project: ${projectKey}`);
         return {
-          error: `The Issue ChangeLog app has been disabled for this project by your project administrator`,
+          error: `The Issue Change Log app has been disabled for this project. Please contact your project administrator to enable it.`,
           changelog: [],
           comments: [],
           attachments: [],
@@ -330,11 +301,6 @@ const devSuvitha = async (req) => {
  */
 const getAllowedProjects = async (req) => {
   try {
-    const isAdmin = await checkSiteAdminAccess();
-    if (!isAdmin) {
-      return { error: "Access denied: Admin privileges required" };
-    }
-
     const allowedProjects = (await storage.get("allowedProjects")) || [];
     let allowedProjectsData = (await storage.get("allowedProjectsData")) || {};
     
@@ -385,11 +351,6 @@ const getAllowedProjects = async (req) => {
  */
 const addAllowedProject = async (req) => {
   try {
-    const isAdmin = await checkSiteAdminAccess();
-    if (!isAdmin) {
-      return { error: "Access denied: Admin privileges required" };
-    }
-
     const { projectKey } = req.payload || req;
     if (!projectKey) {
       return { error: "Project key is required" };
@@ -438,11 +399,6 @@ const addAllowedProject = async (req) => {
  */
 const removeAllowedProject = async (req) => {
   try {
-    const isAdmin = await checkSiteAdminAccess();
-    if (!isAdmin) {
-      return { error: "Access denied: Admin privileges required" };
-    }
-
     const { projectKey } = req.payload || req;
     if (!projectKey) {
       return { error: "Project key is required" };
@@ -469,11 +425,6 @@ const removeAllowedProject = async (req) => {
  */
 const getAllProjects = async (req) => {
   try {
-    const isAdmin = await checkSiteAdminAccess();
-    if (!isAdmin) {
-      return { error: "Access denied: Admin privileges required" };
-    }
-
     const res = await api.asUser().requestJira(route`/rest/api/3/project`);
     if (!res.ok) {
       return { error: "Failed to fetch projects" };
@@ -495,11 +446,10 @@ const getAllProjects = async (req) => {
 };
 
 /**
- * Utility function to check current user's admin status and project access info
+ * Utility function to check current user's project access info
  */
 const getAccessInfo = async (req) => {
   try {
-    const isAdmin = await checkSiteAdminAccess();
     const allowedProjects = (await storage.get("allowedProjects")) || [];
 
     // Get current project if issue context is available
@@ -510,7 +460,6 @@ const getAccessInfo = async (req) => {
     }
 
     return {
-      isAdmin,
       allowedProjects,
       currentProject,
       hasAccess: currentProject

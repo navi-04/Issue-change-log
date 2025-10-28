@@ -403,22 +403,6 @@ export default function App() {
     setCustomDateTo("");
   };
 
-  // If there's an access error, show access denied message
-  if (error && error.includes("Access denied")) {
-    return (
-      <div style={{ padding: "16px" }}>
-        <Banner appearance="error" icon="🔒">
-          <strong>Access Restricted</strong>
-          <p>{error}</p>
-          <p style={{ fontSize: "14px", marginTop: "8px" }}>
-            Please contact your site administrator to request access for this project.
-            Admin can manage project access in Jira Settings → Apps → Issue Change Log Settings.
-          </p>
-        </Banner>
-      </div>
-    );
-  }
-
   // Define table columns
   const head = {
     cells: [
@@ -734,28 +718,172 @@ export default function App() {
     return dataRows;
   }, [paginatedData, currentPage, userTimeZone]);
 
+  // If there's an authorization or access error, show appropriate message
+  if (error && (error.includes("not authorized") || error.includes("disabled"))) {
+    const isDisabled = error.includes("disabled");
+    return (
+      <div style={{ 
+        padding: "32px 24px",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "300px"
+      }}>
+        <div style={{
+          maxWidth: "500px",
+          textAlign: "center",
+          padding: "32px",
+          background: "#FFF",
+          borderRadius: "8px",
+          border: "1px solid #E1E4E8",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+        }}>
+          <div style={{ 
+            fontSize: "48px", 
+            marginBottom: "16px",
+            lineHeight: "1"
+          }}>
+            {isDisabled ? "⚠️" : "🔒"}
+          </div>
+          <h2 style={{ 
+            fontSize: "20px",
+            fontWeight: "600",
+            color: "#172B4D",
+            marginBottom: "12px",
+            marginTop: "0"
+          }}>
+            {isDisabled ? "App Disabled" : "Access Not Authorized"}
+          </h2>
+          <p style={{ 
+            fontSize: "14px",
+            color: "#5E6C84",
+            lineHeight: "1.6",
+            marginBottom: "20px"
+          }}>
+            {error}
+          </p>
+          <div style={{
+            padding: "12px 16px",
+            background: "#F4F5F7",
+            borderRadius: "4px",
+            fontSize: "13px",
+            color: "#42526E",
+            lineHeight: "1.5"
+          }}>
+            {!isDisabled ? (
+              <>
+                <strong>Need access?</strong>
+                <br />
+                Contact your Jira administrator. They can grant access in:
+                <br />
+                <code style={{ 
+                  background: "#FFF",
+                  padding: "2px 6px",
+                  borderRadius: "3px",
+                  fontSize: "12px",
+                  marginTop: "4px",
+                  display: "inline-block"
+                }}>
+                  Jira Settings → Apps → Issue Change Log Settings
+                </code>
+              </>
+            ) : (
+              <>
+                <strong>Need to enable?</strong>
+                <br />
+                Contact your project administrator. They can enable it in:
+                <br />
+                <code style={{ 
+                  background: "#FFF",
+                  padding: "2px 6px",
+                  borderRadius: "3px",
+                  fontSize: "12px",
+                  marginTop: "4px",
+                  display: "inline-block"
+                }}>
+                  Project Settings → Apps → Issue Change Log Settings
+                </code>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div style={{ 
         display: "flex", 
         justifyContent: "center", 
         alignItems: "center", 
-        minHeight: "200px",
-        flexDirection: "column"
+        minHeight: "300px",
+        flexDirection: "column",
+        padding: "32px"
       }}>
         <Spinner size="large" />
-        <p style={{ marginTop: "16px", color: "#6b778c" }}>Loading change log...</p>
+        <p style={{ 
+          marginTop: "16px", 
+          color: "#5E6C84",
+          fontSize: "14px",
+          fontWeight: "500"
+        }}>
+          Loading change log...
+        </p>
       </div>
     );
   }
 
-  if (error && !error.includes("Access denied")) {
+  if (error && !(error.includes("not authorized") || error.includes("disabled"))) {
     return (
-      <div style={{ padding: "16px" }}>
-        <Banner appearance="error">
-          <strong>Error loading data</strong>
-          <p>{error}</p>
-        </Banner>
+      <div style={{ 
+        padding: "32px 24px",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "300px"
+      }}>
+        <div style={{
+          maxWidth: "500px",
+          textAlign: "center",
+          padding: "32px",
+          background: "#FFF",
+          borderRadius: "8px",
+          border: "1px solid #FFEBE6",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+        }}>
+          <div style={{ 
+            fontSize: "48px", 
+            marginBottom: "16px",
+            lineHeight: "1"
+          }}>
+            ⚠️
+          </div>
+          <h2 style={{ 
+            fontSize: "20px",
+            fontWeight: "600",
+            color: "#172B4D",
+            marginBottom: "12px",
+            marginTop: "0"
+          }}>
+            Error Loading Data
+          </h2>
+          <p style={{ 
+            fontSize: "14px",
+            color: "#5E6C84",
+            lineHeight: "1.6",
+            marginBottom: "20px"
+          }}>
+            {error}
+          </p>
+          <Button 
+            appearance="primary" 
+            onClick={handleManualRefresh}
+            style={{ marginTop: "8px" }}
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }

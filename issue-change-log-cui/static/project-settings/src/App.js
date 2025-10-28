@@ -80,13 +80,23 @@ export default function ProjectSettings() {
 
   if (error) {
     return (
-      <div style={{ padding: "24px" }}>
-        <Banner appearance="error">
-          <strong>Error</strong>
-          <p>{error}</p>
-        </Banner>
-        <div style={{ marginTop: "16px" }}>
-          <Button onClick={fetchProjectSettings}>
+      <div style={{ 
+        padding: "24px",
+        maxWidth: "600px"
+      }}>
+        <div>
+          <p style={{ 
+            fontSize: "14px",
+            color: "#5E6C84",
+            marginBottom: "16px",
+            lineHeight: "1.5"
+          }}>
+            {error}
+          </p>
+          <Button 
+            appearance="primary" 
+            onClick={fetchProjectSettings}
+          >
             Try Again
           </Button>
         </div>
