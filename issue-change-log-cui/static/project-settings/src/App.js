@@ -1,3 +1,18 @@
+/**
+ * Project Settings Component
+ * 
+ * This component provides project administrators with the ability to:
+ * - View the authorization status of their project
+ * - Enable or disable the Issue Change Log app for their project
+ * - View current app settings and configuration
+ * 
+ * Access Control:
+ * - Requires site admin to have authorized the project
+ * - Requires project admin permissions to modify settings
+ * 
+ * @component
+ */
+
 import React, { useEffect, useState } from "react";
 import { invoke } from "@forge/bridge";
 import Button from "@atlaskit/button";
@@ -7,17 +22,25 @@ import Banner from "@atlaskit/banner";
 import "@atlaskit/css-reset";
 
 export default function ProjectSettings() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [message, setMessage] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [isAppEnabled, setIsAppEnabled] = useState(false);
-  const [hasPermission, setHasPermission] = useState(false);
+  // State management
+  const [loading, setLoading] = useState(true); // Loading state for async operations
+  const [error, setError] = useState(null); // Error message state
+  const [message, setMessage] = useState(""); // Success/info message state
+  const [projectName, setProjectName] = useState(""); // Current project name
+  const [isAppEnabled, setIsAppEnabled] = useState(false); // App enabled status
+  const [hasPermission, setHasPermission] = useState(false); // Site-wide authorization status
 
+  /**
+   * Fetches initial project settings on component mount
+   */
   useEffect(() => {
     fetchProjectSettings();
   }, []);
 
+  /**
+   * Fetches current project settings from backend
+   * Retrieves authorization status and app enablement state
+   */
   const fetchProjectSettings = async () => {
     try {
       setLoading(true);
@@ -30,7 +53,7 @@ export default function ProjectSettings() {
         setHasPermission(result.hasPermission);
         setIsAppEnabled(result.isEnabled || false);
       } else {
-        // Even if not successful, try to get project name if available
+        // Try to get project name even if operation failed
         if (result.project?.name) {
           setProjectName(result.project.name);
         }
@@ -43,6 +66,10 @@ export default function ProjectSettings() {
     }
   };
 
+  /**
+   * Handles the enable/disable toggle change
+   * Updates the app enablement status for this project
+   */
   const handleToggleChange = async () => {
     try {
       setLoading(true);
@@ -63,6 +90,7 @@ export default function ProjectSettings() {
     }
   };
 
+  // Render initial loading state
   if (loading && !projectName) {
     return (
       <div style={{ 
@@ -78,6 +106,7 @@ export default function ProjectSettings() {
     );
   }
 
+  // Render error state
   if (error) {
     return (
       <div style={{ 
@@ -104,6 +133,7 @@ export default function ProjectSettings() {
     );
   }
 
+  // Render unauthorized state (project not granted access by site admin)
   if (!hasPermission) {
     return (
       <div style={{ 
@@ -146,6 +176,7 @@ export default function ProjectSettings() {
     );
   }
 
+  // Render main settings interface (authorized project)
   return (
     <div style={{ 
       padding: "24px", 

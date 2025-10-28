@@ -1,3 +1,23 @@
+/**
+ * Issue Change Log Component
+ * 
+ * This component displays a comprehensive changelog for Jira issues, including:
+ * - Field changes (status, priority, assignee, etc.)
+ * - Comments
+ * - Attachments
+ * 
+ * Features:
+ * - Multi-column filtering (Author, Field, From, To, Date)
+ * - Pagination with customizable page sizes
+ * - CSV export functionality
+ * - Date range filtering with custom date picker
+ * - Real-time data refresh
+ * - User timezone support
+ * - Responsive design
+ * 
+ * @component
+ */
+
 import React, { useEffect, useState, useMemo } from "react";
 import { invoke } from "@forge/bridge";
 import DynamicTable from "@atlaskit/dynamic-table";
@@ -10,12 +30,21 @@ import Banner from "@atlaskit/banner";
 import Pagination from "@atlaskit/pagination";
 import "@atlaskit/css-reset";
 
+// Environment configuration - identifies the backend service endpoint
 const currentDev = "devSuvitha";
 
-// Get user's local timezone
+/**
+ * Hook to get the user's local timezone
+ * @returns {string} User's timezone (e.g., "America/New_York")
+ */
 const useUserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-// Date Formatter
+/**
+ * Formats a date string to a localized date-time string
+ * @param {string} dateString - ISO date string to format
+ * @param {string} timeZone - Target timezone for formatting
+ * @returns {string} Formatted date string or "-" if invalid
+ */
 const formatDate = (dateString, timeZone) => {
   if (!dateString) return "-";
   return new Date(dateString).toLocaleString(undefined, {
@@ -28,7 +57,11 @@ const formatDate = (dateString, timeZone) => {
   });
 };
 
-// Relative Time
+/**
+ * Converts a date to a human-readable relative time string
+ * @param {string|Date} date - Date to convert
+ * @returns {string} Relative time string (e.g., "5 minutes ago", "2 days ago")
+ */
 const getRelativeTime = (date) => {
   if (!date) return "";
   const targetDate = new Date(date);
@@ -53,7 +86,11 @@ const getRelativeTime = (date) => {
   return `${years} year${years !== 1 ? "s" : ""} ago`;
 };
 
-// CSV Export
+/**
+ * Exports the changelog data to a CSV file
+ * @param {Array} data - Array of changelog entries to export
+ * @param {string} timeZone - Timezone for date formatting in CSV
+ */
 const exportCSV = (data, timeZone) => {
   const headers = ["Author", "Field/Content", "From", "To", "Date"];
   const rows = data.map((row) =>
@@ -75,30 +112,39 @@ const exportCSV = (data, timeZone) => {
   a.click();
 };
 
+/**
+ * Main App Component
+ * Renders the Issue Change Log interface with filtering, pagination, and export capabilities
+ */
 export default function App() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  const [pageLoading, setPageLoading] = useState(false);
+  // State management
+  const [data, setData] = useState([]); // All changelog data from API
+  const [loading, setLoading] = useState(true); // Initial loading state
+  const [error, setError] = useState(null); // Error message state
+  const [currentPage, setCurrentPage] = useState(1); // Current page number
+  const [pageSize, setPageSize] = useState(25); // Items per page
+  const [pageLoading, setPageLoading] = useState(false); // Page transition loading
   
-  // Column filters
+  // Column-based filters
   const [filters, setFilters] = useState({
-    author: [],
-    field: [],
-    from: "",
-    to: "",
-    date: ""
+    author: [], // Multi-select author filter
+    field: [], // Multi-select field/content filter
+    from: "", // Text filter for "From" column
+    to: "", // Text filter for "To" column
+    date: "" // Date range filter
   });
 
-  const [customDateFilter, setCustomDateFilter] = useState("");
-  const [customDateFrom, setCustomDateFrom] = useState("");
-  const [customDateTo, setCustomDateTo] = useState("");
+  // Custom date range filter states
+  const [customDateFilter, setCustomDateFilter] = useState(""); // Selected preset or "custom"
+  const [customDateFrom, setCustomDateFrom] = useState(""); // Custom date range start
+  const [customDateTo, setCustomDateTo] = useState(""); // Custom date range end
 
   const userTimeZone = useUserTimeZone();
 
-  // Generate filter options from data
+  /**
+   * Generate dynamic filter options from current data
+   * Memoized to avoid recalculation on every render
+   */
   const filterOptions = useMemo(() => {
     // Get unique authors
     const authors = [...new Set(data.map(item => item.author).filter(Boolean))]
@@ -136,7 +182,12 @@ export default function App() {
     };
   }, [data]);
 
-  // Helper function to check if an item matches the date filter
+  /**
+   * Checks if a changelog item matches the selected date filter
+   * @param {Object} item - Changelog item to check
+   * @param {string} filterValue - Selected date filter value
+   * @returns {boolean} True if item matches the filter
+   */
   const matchesDateFilter = (item, filterValue) => {
     if (!filterValue || filterValue === "") return true;
     
@@ -189,7 +240,11 @@ export default function App() {
     }
   };
 
-  // Filter data based on current filters
+  /**
+   * Filters the complete dataset based on all active filters
+   * Supports multi-select filters for Author and Field columns
+   * Memoized to recalculate only when data or filters change
+   */
   const filteredData = useMemo(() => {
     return data.filter(item => {
       // Author filter - now supports multiple selections
@@ -227,57 +282,47 @@ export default function App() {
     });
   }, [data, filters, userTimeZone, customDateFrom, customDateTo]);
 
-  // Sort filtered data by date (newest first)
+  /**
+   * Sorts filtered data by date in descending order (newest first)
+   * Memoized to avoid re-sorting on every render
+   */
   const sortedData = useMemo(() => {
     return [...filteredData].sort(
       (a, b) => new Date(b.date || b.created) - new Date(a.date || a.created)
     );
   }, [filteredData]);
 
-  // Paginated data with performance optimization for large datasets
+  /**
+   * Extracts the current page of data for display
+   * Optimized for large datasets by slicing only the needed items
+   * Memoized to recalculate only when sorted data or pagination changes
+   */
   const paginatedData = useMemo(() => {
     if (!sortedData || sortedData.length === 0) {
-      console.log('No data to paginate');
       return [];
     }
     
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    const slicedData = sortedData.slice(startIndex, endIndex);
-    
-    console.log(`Pagination calculation:`, {
-      totalItems: sortedData.length,
-      currentPage,
-      pageSize,
-      startIndex,
-      endIndex,
-      returnedItems: slicedData.length,
-      totalPages: Math.ceil(sortedData.length / pageSize)
-    });
-    
-    return slicedData;
+    return sortedData.slice(startIndex, endIndex);
   }, [sortedData, currentPage, pageSize]);
 
+  // Calculate total number of pages
   const totalPages = sortedData.length > 0 ? Math.ceil(sortedData.length / pageSize) : 1;
-  
-  console.log('Pagination state:', { 
-    dataLength: sortedData.length, 
-    pageSize, 
-    totalPages, 
-    currentPage 
-  });
 
+  /**
+   * Fetches changelog data on component mount
+   * Retrieves all changelog entries, comments, and attachments
+   * Deduplicates entries and combines them into a single array
+   */
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        console.log("Fetching data...");
         const result = await invoke(currentDev, {
-          filter: "all" // Always fetch all data, filter on frontend
+          filter: "all" // Fetch all data types: changelog, comments, attachments
         });
-        
-        console.log("Result received:", result);
         
         if (result && result.error) {
           setError(result.error);
@@ -286,13 +331,14 @@ export default function App() {
         }
 
         if (result && typeof result === "object") {
+          // Combine all activity types into a single array
           const allActivities = [
             ...(result.changelog || []),
             ...(result.comments || []),
             ...(result.attachments || []),
           ];
           
-          // Deduplicate
+          // Deduplicate entries based on type and key fields
           const seen = new Set();
           const uniqueActivities = allActivities.filter((item) => {
             let key = `${item.type}-${item.date || item.created}`;
@@ -312,7 +358,6 @@ export default function App() {
           setData(result || []);
         }
       } catch (err) {
-        console.error("Error fetching data:", err);
         setError(err.message || "Unknown error");
         setData([]);
       } finally {
@@ -321,20 +366,19 @@ export default function App() {
     };
     
     fetchData();
-    // Removed automatic refresh - now using manual refresh button
   }, []);
 
-  // Manual refresh function
+  /**
+   * Manually refreshes the changelog data
+   * Called when user clicks the Refresh button
+   */
   const handleManualRefresh = async () => {
     setLoading(true);
     setError(null);
     try {
-      console.log("Manual refresh triggered...");
       const result = await invoke(currentDev, {
         filter: "all"
       });
-      
-      console.log("Result received:", result);
       
       if (result && result.error) {
         setError(result.error);
@@ -369,7 +413,6 @@ export default function App() {
         setData(result || []);
       }
     } catch (err) {
-      console.error("Error fetching data:", err);
       setError(err.message || "Unknown error");
       setData([]);
     } finally {
@@ -377,19 +420,28 @@ export default function App() {
     }
   };
 
-  // Reset to first page when filters change
+  /**
+   * Resets to the first page whenever filters change
+   * Prevents showing empty pages when filtered results are fewer
+   */
   useEffect(() => {
     setPageLoading(true);
     setCurrentPage(1);
-    setTimeout(() => setPageLoading(false), 50); // Small delay to show loading
+    setTimeout(() => setPageLoading(false), 50);
   }, [filters]);
 
-  // Update a specific filter
+  /**
+   * Updates a specific column filter
+   * @param {string} column - Column name (author, field, from, to, date)
+   * @param {*} value - Filter value (string, array, or select option)
+   */
   const updateFilter = (column, value) => {
     setFilters(prev => ({ ...prev, [column]: value }));
   };
 
-  // Clear all filters
+  /**
+   * Clears all active filters and resets custom date range
+   */
   const clearFilters = () => {
     setFilters({
       author: [],
@@ -403,7 +455,10 @@ export default function App() {
     setCustomDateTo("");
   };
 
-  // Define table columns
+  /**
+   * Table header configuration
+   * Each column includes a filter component and styling
+   */
   const head = {
     cells: [
       {
@@ -613,7 +668,12 @@ export default function App() {
     ]
   };
 
-  // Create table rows with better error handling
+  /**
+   * Generates table rows from paginated data
+   * Handles different entry types (changelog, comment, attachment)
+   * Adds empty rows if needed to keep filters visible
+   * Memoized to avoid recalculating on every render
+   */
   const rows = useMemo(() => {
     if (!paginatedData || paginatedData.length === 0) {
       return [];
@@ -683,7 +743,7 @@ export default function App() {
           ]
         };
       } catch (error) {
-        console.error("Error creating row for entry:", entry, error);
+        // Fallback for malformed entries
         return {
           key: `error-row-${index}`,
           cells: [
@@ -697,7 +757,7 @@ export default function App() {
       }
     });
 
-    // Add empty rows if there are fewer than 5 rows to prevent filter dropdowns from being hidden
+    // Pad with empty rows to maintain minimum table height and keep filters visible
     const minRows = 5;
     if (dataRows.length < minRows && dataRows.length > 0) {
       const emptyRowsNeeded = minRows - dataRows.length;
@@ -718,7 +778,10 @@ export default function App() {
     return dataRows;
   }, [paginatedData, currentPage, userTimeZone]);
 
-  // If there's an authorization or access error, show appropriate message
+  /**
+   * Render authorization/access error state
+   * Shows when user lacks permissions or app is disabled
+   */
   if (error && (error.includes("not authorized") || error.includes("disabled"))) {
     const isDisabled = error.includes("disabled");
     return (
@@ -811,6 +874,9 @@ export default function App() {
     );
   }
 
+  /**
+   * Render initial loading state
+   */
   if (loading) {
     return (
       <div style={{ 
@@ -834,6 +900,10 @@ export default function App() {
     );
   }
 
+  /**
+   * Render general error state
+   * Shows when data fetch fails for reasons other than authorization
+   */
   if (error && !(error.includes("not authorized") || error.includes("disabled"))) {
     return (
       <div style={{ 
@@ -888,10 +958,14 @@ export default function App() {
     );
   }
 
+  // Check if any filters are currently active
   const hasActiveFilters = filters.author.length > 0 || filters.field.length > 0 || 
     filters.from !== "" || filters.to !== "" || filters.date !== "" || 
     customDateFrom !== "" || customDateTo !== "";
 
+  /**
+   * Main render: Display the changelog table with filters and pagination
+   */
   return (
     <div style={{ padding: "16px", minWidth: "320px", overflowX: "auto" }}>
       <style>
@@ -939,6 +1013,7 @@ export default function App() {
           </p>
         </div>
         
+        {/* Action buttons section */}
         <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
           {hasActiveFilters && (
             <Button 
@@ -960,7 +1035,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Table Container with horizontal scroll */}
+      {/* Main table container with horizontal scrolling support */}
       <div style={{ overflowX: "auto", marginBottom: "16px" }}>
         <div style={{ minWidth: "800px" }}>
           <DynamicTable
@@ -991,7 +1066,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Custom Pagination */}
+      {/* Pagination controls */}
       {sortedData.length > 0 && (
         <div 
           style={{ 
@@ -1002,13 +1077,6 @@ export default function App() {
             flexWrap: "wrap",
             gap: "12px"
           }}
-          // Debug logging
-          ref={() => console.log('Pagination rendered:', { 
-            sortedDataLength: sortedData.length, 
-            pageSize, 
-            totalPages, 
-            currentPage 
-          })}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
             <span style={{ fontSize: "clamp(12px, 2.5vw, 14px)", color: "#6b778c", whiteSpace: "nowrap" }}>Items per page:</span>
@@ -1033,14 +1101,14 @@ export default function App() {
             />
           </div>
 
+          {/* Page navigation controls */}
           {sortedData.length > 0 ? (
             <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "center" }}>
-              {/* Previous Button */}
+              {/* Previous page button */}
               <Button 
                 appearance="subtle" 
                 onClick={() => {
                   const newPage = Math.max(1, currentPage - 1);
-                  console.log('Previous clicked:', { currentPage, newPage });
                   if (newPage !== currentPage) {
                     setPageLoading(true);
                     setCurrentPage(newPage);
@@ -1053,9 +1121,9 @@ export default function App() {
                 ← Prev
               </Button>
               
-              {/* Page Numbers */}
+              {/* Page number buttons or current page indicator */}
               {totalPages <= 7 ? (
-                // Show all page numbers if 7 or fewer pages
+                // Show individual page buttons for small page counts
                 [...Array(totalPages)].map((_, i) => {
                   const pageNum = i + 1;
                   return (
@@ -1063,7 +1131,6 @@ export default function App() {
                       key={pageNum}
                       appearance={pageNum === currentPage ? "primary" : "subtle"}
                       onClick={() => {
-                        console.log('Page button clicked:', { pageNum, currentPage });
                         if (pageNum !== currentPage) {
                           setPageLoading(true);
                           setCurrentPage(pageNum);
@@ -1078,18 +1145,17 @@ export default function App() {
                   );
                 })
               ) : (
-                // Show current page info for many pages
+                // Show compact page indicator for large page counts
                 <span style={{ fontSize: "clamp(12px, 2.5vw, 14px)", color: "#6b778c", margin: "0 4px", whiteSpace: "nowrap" }}>
                   Page {currentPage} of {totalPages}
                 </span>
               )}
               
-              {/* Next Button */}
+              {/* Next page button */}
               <Button 
                 appearance="subtle" 
                 onClick={() => {
                   const newPage = Math.min(totalPages, currentPage + 1);
-                  console.log('Next clicked:', { currentPage, newPage, totalPages });
                   if (newPage !== currentPage) {
                     setPageLoading(true);
                     setCurrentPage(newPage);
@@ -1102,7 +1168,7 @@ export default function App() {
                 Next →
               </Button>
               
-              {/* Direct Page Input for many pages */}
+              {/* Direct page jump input for large page counts */}
               {totalPages > 7 && (
                 <div style={{ marginLeft: "8px", display: "flex", alignItems: "center", gap: "4px", flexWrap: "nowrap" }}>
                   <span style={{ fontSize: "clamp(12px, 2.5vw, 14px)", color: "#6b778c", whiteSpace: "nowrap" }}>Go to:</span>
@@ -1113,7 +1179,6 @@ export default function App() {
                     value={currentPage}
                     onChange={(e) => {
                       const page = parseInt(e.target.value, 10);
-                      console.log('Direct input:', { input: e.target.value, page, totalPages });
                       if (!isNaN(page) && page >= 1 && page <= totalPages && page !== currentPage) {
                         setPageLoading(true);
                         setCurrentPage(page);

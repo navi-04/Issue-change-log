@@ -1,23 +1,56 @@
+/**
+ * Admin Application Component
+ * 
+ * This component provides Jira site administrators with centralized control over
+ * the Issue Change Log app. It enables admins to:
+ * 
+ * Features:
+ * - View all projects in the Jira instance
+ * - Add projects to the app's allowed list
+ * - Remove projects from the allowed list
+ * - Bulk operations for adding/removing multiple projects
+ * - Search and filter available projects
+ * - View project metadata (name, ID, access date)
+ * 
+ * Access Control:
+ * - Requires Jira site administrator permissions
+ * - Only accessible from Jira admin settings
+ * 
+ * @component
+ */
+
 import React, { useEffect, useState } from "react";
 import { invoke } from "@forge/bridge";
 import Button from "@atlaskit/button";
 import "@atlaskit/css-reset";
 
 export default function AdminApp() {
-  const [allowedProjects, setAllowedProjects] = useState([]);
-  const [allowedProjectsData, setAllowedProjectsData] = useState({});
-  const [allProjects, setAllProjects] = useState([]);
-  const [selectedProjects, setSelectedProjects] = useState([]);
-  const [selectedForRemoval, setSelectedForRemoval] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [initialLoading, setInitialLoading] = useState(true);
+  // State for project data
+  const [allowedProjects, setAllowedProjects] = useState([]); // Projects with app access
+  const [allowedProjectsData, setAllowedProjectsData] = useState({}); // Project metadata
+  const [allProjects, setAllProjects] = useState([]); // All Jira projects
+  
+  // State for UI interactions
+  const [selectedProjects, setSelectedProjects] = useState([]); // Selected for adding
+  const [selectedForRemoval, setSelectedForRemoval] = useState([]); // Selected for removal
+  const [searchQuery, setSearchQuery] = useState(""); // Search filter text
+  
+  // State for loading and messages
+  const [loading, setLoading] = useState(false); // Operation in progress
+  const [message, setMessage] = useState(""); // User feedback message
+  const [initialLoading, setInitialLoading] = useState(true); // Initial data fetch
 
+  /**
+   * Loads initial data on component mount
+   */
   useEffect(() => {
     loadData();
   }, []);
 
+  /**
+   * Fetches all project data from backend
+   * Loads both allowed projects and all available Jira projects
+   */
   const loadData = async () => {
     if (!initialLoading) setLoading(true);
     try {
@@ -46,6 +79,10 @@ export default function AdminApp() {
     }
   };
 
+  /**
+   * Adds selected projects to the allowed list
+   * Supports bulk addition of multiple projects
+   */
   const addProject = async () => {
     if (selectedProjects.length === 0) {
       setMessage("Please select at least one project to add");
@@ -84,6 +121,11 @@ export default function AdminApp() {
     }
   };
 
+  /**
+   * Removes a single project from the allowed list
+   * 
+   * @param {string} projectKey - The Jira project key to remove
+   */
   const removeProject = async (projectKey) => {
     setLoading(true);
     try {
@@ -104,6 +146,10 @@ export default function AdminApp() {
     }
   };
 
+  /**
+   * Removes multiple selected projects from the allowed list
+   * Supports bulk removal operations
+   */
   const removeSelectedProjects = async () => {
     if (selectedForRemoval.length === 0) {
       setMessage("Please select at least one project to remove");
@@ -142,6 +188,11 @@ export default function AdminApp() {
     }
   };
 
+  /**
+   * Toggles selection of a project for addition
+   * 
+   * @param {string} projectKey - The project key to toggle
+   */
   const toggleProjectSelection = (projectKey) => {
     setSelectedProjects(prev => 
       prev.includes(projectKey)
@@ -150,6 +201,11 @@ export default function AdminApp() {
     );
   };
 
+  /**
+   * Toggles selection of a project for removal
+   * 
+   * @param {string} projectKey - The project key to toggle
+   */
   const toggleRemovalSelection = (projectKey) => {
     setSelectedForRemoval(prev => 
       prev.includes(projectKey)
@@ -158,6 +214,9 @@ export default function AdminApp() {
     );
   };
 
+  /**
+   * Toggles select all/none for removal operations
+   */
   const toggleAllForRemoval = () => {
     if (selectedForRemoval.length === allowedProjects.length) {
       setSelectedForRemoval([]);
@@ -166,10 +225,12 @@ export default function AdminApp() {
     }
   };
 
+  // Filter projects that don't already have access
   const availableProjects = allProjects.filter(
     project => !allowedProjects.includes(project.key)
   );
 
+  // Filter available projects by search query
   const filteredAvailableProjects = availableProjects.filter(project => {
     const query = searchQuery.toLowerCase();
     return (
@@ -178,6 +239,7 @@ export default function AdminApp() {
     );
   });
 
+  // Render initial loading state
   if (initialLoading) {
     return (
       <div style={{ 
@@ -190,6 +252,7 @@ export default function AdminApp() {
     );
   }
 
+  // Render main admin interface
   return (
     <div style={{ 
       padding: "24px", 

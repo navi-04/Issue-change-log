@@ -1,31 +1,47 @@
+/**
+ * Issue Change Log - Backend Resolver
+ * 
+ * This module handles all backend operations for the Issue Change Log Forge app.
+ * It manages:
+ * - Project access control (site-wide and project-level)
+ * - Changelog data fetching and filtering
+ * - Comments and attachments retrieval
+ * - Admin operations (project management, permissions)
+ * - Project-level settings (enable/disable functionality)
+ * 
+ * @module index
+ */
+
 import Resolver from "@forge/resolver";
 import api, { route } from "@forge/api";
 import { storage } from "@forge/api";
 
 /**
- * Check if a project has access to the app
+ * Checks if a project has access to the Issue Change Log app
+ * 
+ * @param {string} projectKey - The Jira project key to check
+ * @returns {Promise<boolean>} True if project has access, false otherwise
  */
 const checkProjectAccess = async (projectKey) => {
   try {
     const allowedProjects = (await storage.get("allowedProjects")) || [];
 
-    // If no projects are configured yet, allow access (for initial setup)
+    // Allow access during initial setup if no projects configured
     if (allowedProjects.length === 0) {
-      console.log(
-        "No projects configured yet, allowing access for initial setup"
-      );
       return true;
     }
 
     return allowedProjects.includes(projectKey);
   } catch (error) {
-    console.error("Error checking project access:", error);
     return false;
   }
 };
 
 /**
- * Get project key from issue key
+ * Extracts the project key from an issue key
+ * 
+ * @param {string} issueKey - The Jira issue key (e.g., "KC-123")
+ * @returns {Promise<string|null>} The project key or null if not found
  */
 const getProjectKeyFromIssue = async (issueKey) => {
   try {
@@ -37,13 +53,15 @@ const getProjectKeyFromIssue = async (issueKey) => {
     const issue = await res.json();
     return issue.fields?.project?.key;
   } catch (error) {
-    console.error("Error getting project key:", error);
     return null;
   }
 };
 
 /**
- * Parse a relative time filter string to a Date cutoff.
+ * Parses a relative time filter string to a Date cutoff
+ * 
+ * @param {string} filterValue - Filter value (24h, 7d, 30d, 6m, 1y, all)
+ * @returns {Date|null} Cutoff date or null for "all" filter
  */
 const parseRelativeTime = (filterValue) => {
   const now = new Date();
@@ -71,7 +89,11 @@ const parseRelativeTime = (filterValue) => {
 };
 
 /**
- * Fetch comments for an issue
+ * Fetches comments for a specific issue
+ * 
+ * @param {string} issueKey - The Jira issue key
+ * @param {Date|null} cutoffDate - Optional date filter (only return comments after this date)
+ * @returns {Promise<Array>} Array of formatted comment objects
  */
 const fetchIssueComments = async (issueKey, cutoffDate) => {
   try {
@@ -80,7 +102,6 @@ const fetchIssueComments = async (issueKey, cutoffDate) => {
       .requestJira(route`/rest/api/3/issue/${issueKey}/comment`);
 
     if (!res.ok) {
-      console.error(`Error fetching comments for ${issueKey}:`, res.status);
       return [];
     }
 
@@ -107,13 +128,16 @@ const fetchIssueComments = async (issueKey, cutoffDate) => {
         id: comment.id,
       }));
   } catch (e) {
-    console.error(`Error fetching comments for ${issueKey}:`, e);
     return [];
   }
 };
 
 /**
- * Fetch attachments for an issue
+ * Fetches attachments for a specific issue
+ * 
+ * @param {string} issueKey - The Jira issue key
+ * @param {Date|null} cutoffDate - Optional date filter (only return attachments after this date)
+ * @returns {Promise<Array>} Array of formatted attachment objects
  */
 const fetchIssueAttachments = async (issueKey, cutoffDate) => {
   try {
@@ -122,7 +146,6 @@ const fetchIssueAttachments = async (issueKey, cutoffDate) => {
       .requestJira(route`/rest/api/3/issue/${issueKey}?fields=attachment`);
 
     if (!res.ok) {
-      console.error(`Error fetching attachments for ${issueKey}:`, res.status);
       return [];
     }
 
@@ -146,19 +169,28 @@ const fetchIssueAttachments = async (issueKey, cutoffDate) => {
         content: attachment.content,
       }));
   } catch (e) {
-    console.error(`Error fetching attachments for ${issueKey}:`, e);
     return [];
   }
 };
 
 /**
- * Main resolver function
+ * Main resolver function - Fetches changelog, comments, and attachments for issues
+ * 
+ * This is the primary backend function that:
+ * 1. Validates project access and app enablement
+ * 2. Fetches changelog history from Jira
+ * 3. Retrieves comments and attachments
+ * 4. Filters data based on time range
+ * 5. Returns combined results
+ * 
+ * @param {Object} req - Request object from Forge
+ * @param {string|string[]} req.issueKeys - Issue key(s) to fetch data for
+ * @param {string} req.filter - Time filter (24h, 7d, 30d, 6m, 1y, all)
+ * @returns {Promise<Object>} Combined changelog, comments, and attachments data
  */
 const devSuvitha = async (req) => {
   try {
-    console.log("Request received:", JSON.stringify(req, null, 2));
-
-    // Determine issue keys
+    // Determine issue keys from various possible sources
     let issueKeys = req.issueKeys || req.payload?.issueKeys;
     let contextKey = req?.context?.extension?.issue?.key;
 
@@ -171,15 +203,11 @@ const devSuvitha = async (req) => {
       }
     }
 
-    console.log("Processing issue keys:", issueKeys);
-
-    // Check project access for each issue
+    // Validate project access for each issue
     for (const issueKey of issueKeys) {
       const projectKey = await getProjectKeyFromIssue(issueKey);
-      console.log(`Issue ${issueKey} belongs to project: ${projectKey}`);
 
       if (!projectKey) {
-        console.error(`Could not determine project for issue: ${issueKey}`);
         return {
           error: "Unable to determine the project for this issue. Please try refreshing the page or contact your administrator if the problem persists.",
           changelog: [],
@@ -190,10 +218,8 @@ const devSuvitha = async (req) => {
       }
 
       const hasAccess = await checkProjectAccess(projectKey);
-      console.log(`Project ${projectKey} has access: ${hasAccess}`);
 
       if (!hasAccess) {
-        console.log(`Access denied for project: ${projectKey}`);
         return {
           error: `This project is not authorized to use the Issue Change Log app. Please contact your Jira administrator to grant access for this project.`,
           changelog: [],
@@ -203,12 +229,11 @@ const devSuvitha = async (req) => {
         };
       }
 
-      // Check if the app is enabled for this specific project
+      // Check if app is enabled for this specific project
       const projectSettings = (await storage.get(`project_${projectKey}_settings`)) || {};
-      const isProjectAppEnabled = projectSettings.enabled !== false; // Default to true if not set
+      const isProjectAppEnabled = projectSettings.enabled !== false;
       
       if (!isProjectAppEnabled) {
-        console.log(`App disabled for project: ${projectKey}`);
         return {
           error: `The Issue Change Log app has been disabled for this project. Please contact your project administrator to enable it.`,
           changelog: [],
@@ -219,7 +244,7 @@ const devSuvitha = async (req) => {
       }
     }
 
-    // Parse filter
+    // Parse and apply time filter
     const rawFilter = req.filter || req.payload?.filter || "all";
     const filterValue =
       typeof rawFilter === "string" ? rawFilter : rawFilter?.value || "all";
@@ -229,20 +254,19 @@ const devSuvitha = async (req) => {
     let allComments = [];
     let allAttachments = [];
 
+    // Fetch data for each issue
     for (const issueKey of issueKeys) {
-      // Fetch issue with changelog
       const res = await api
         .asUser()
         .requestJira(route`/rest/api/3/issue/${issueKey}?expand=changelog`);
       if (!res.ok) {
-        console.error("Jira API error:", res.status, await res.text());
         continue;
       }
 
       const json = await res.json();
       const allChanges = json.changelog?.histories || [];
 
-      // Filter changelog entries
+      // Filter and format changelog entries
       const changelogEntries = allChanges
         .filter((entry) => {
           if (!cutoffDate) return true;
@@ -260,7 +284,7 @@ const devSuvitha = async (req) => {
           }))
         );
 
-      // Fetch comments + attachments
+      // Fetch associated comments and attachments
       const comments = await fetchIssueComments(issueKey, cutoffDate);
       const attachments = await fetchIssueAttachments(issueKey, cutoffDate);
 
@@ -269,23 +293,13 @@ const devSuvitha = async (req) => {
       allAttachments.push(...attachments);
     }
 
-    const result = {
+    return {
       changelog: allChangelog,
       comments: allComments,
       attachments: allAttachments,
       total: allChangelog.length + allComments.length + allAttachments.length,
     };
-
-    console.log("Result summary:", {
-      changelogCount: allChangelog.length,
-      commentsCount: allComments.length,
-      attachmentsCount: allAttachments.length,
-      total: result.total,
-    });
-
-    return result;
   } catch (e) {
-    console.error("Error fetching changelog:", e);
     return {
       error: e.message,
       changelog: [],
@@ -297,14 +311,18 @@ const devSuvitha = async (req) => {
 };
 
 /**
- * Admin function to get allowed projects
+ * Admin function - Gets list of projects with app access
+ * Includes metadata migration for legacy projects
+ * 
+ * @param {Object} req - Request object
+ * @returns {Promise<Object>} Object containing allowed projects and their metadata
  */
 const getAllowedProjects = async (req) => {
   try {
     const allowedProjects = (await storage.get("allowedProjects")) || [];
     let allowedProjectsData = (await storage.get("allowedProjectsData")) || {};
     
-    // Migration: Populate metadata for existing projects without it
+    // Populate metadata for existing projects without it (migration)
     let needsUpdate = false;
     for (const projectKey of allowedProjects) {
       if (!allowedProjectsData[projectKey]) {
@@ -321,7 +339,6 @@ const getAllowedProjects = async (req) => {
             needsUpdate = true;
           }
         } catch (error) {
-          console.error(`Error fetching details for project ${projectKey}:`, error);
           // Set minimal data if fetch fails
           allowedProjectsData[projectKey] = {
             key: projectKey,
@@ -341,13 +358,17 @@ const getAllowedProjects = async (req) => {
     
     return { allowedProjects, allowedProjectsData };
   } catch (error) {
-    console.error("Error getting allowed projects:", error);
     return { error: error.message };
   }
 };
 
 /**
- * Admin function to add a project to allowed list
+ * Admin function - Adds a project to the allowed list
+ * Fetches project details from Jira and stores metadata
+ * 
+ * @param {Object} req - Request object
+ * @param {string} req.payload.projectKey - Jira project key to add
+ * @returns {Promise<Object>} Updated list of allowed projects
  */
 const addAllowedProject = async (req) => {
   try {
@@ -360,7 +381,6 @@ const addAllowedProject = async (req) => {
     const allowedProjectsData = (await storage.get("allowedProjectsData")) || {};
     
     if (!allowedProjectsData[projectKey]) {
-      // Fetch project details
       const projectResponse = await api.asUser().requestJira(route`/rest/api/3/project/${projectKey}`);
       
       if (!projectResponse.ok) {
@@ -381,7 +401,7 @@ const addAllowedProject = async (req) => {
       // Initialize project settings with enabled: true by default
       await storage.set(`project_${projectKey}_settings`, { enabled: true });
       
-      // Also maintain the simple array for backward compatibility
+      // Maintain simple array for backward compatibility
       const allowedProjects = Object.keys(allowedProjectsData);
       await storage.set("allowedProjects", allowedProjects);
     }
@@ -389,13 +409,16 @@ const addAllowedProject = async (req) => {
     const allowedProjects = Object.keys(allowedProjectsData);
     return { success: true, allowedProjects, allowedProjectsData };
   } catch (error) {
-    console.error("Error adding allowed project:", error);
     return { error: error.message };
   }
 };
 
 /**
- * Admin function to remove a project from allowed list
+ * Admin function - Removes a project from the allowed list
+ * 
+ * @param {Object} req - Request object
+ * @param {string} req.payload.projectKey - Jira project key to remove
+ * @returns {Promise<Object>} Updated list of allowed projects
  */
 const removeAllowedProject = async (req) => {
   try {
@@ -409,19 +432,21 @@ const removeAllowedProject = async (req) => {
     delete allowedProjectsData[projectKey];
     await storage.set("allowedProjectsData", allowedProjectsData);
 
-    // Update the simple array
+    // Update simple array
     const allowedProjects = Object.keys(allowedProjectsData);
     await storage.set("allowedProjects", allowedProjects);
 
     return { success: true, allowedProjects, allowedProjectsData };
   } catch (error) {
-    console.error("Error removing allowed project:", error);
     return { error: error.message };
   }
 };
 
 /**
- * Admin function to get all available projects in the instance
+ * Admin function - Gets all available projects in the Jira instance
+ * 
+ * @param {Object} req - Request object
+ * @returns {Promise<Object>} Object containing array of all projects
  */
 const getAllProjects = async (req) => {
   try {
@@ -440,19 +465,22 @@ const getAllProjects = async (req) => {
       })),
     };
   } catch (error) {
-    console.error("Error getting all projects:", error);
     return { error: error.message };
   }
 };
 
 /**
- * Utility function to check current user's project access info
+ * Utility function - Returns current user's project access information
+ * Used for debugging and access validation
+ * 
+ * @param {Object} req - Request object with optional issue context
+ * @returns {Promise<Object>} Access information including allowed projects and current project
  */
 const getAccessInfo = async (req) => {
   try {
     const allowedProjects = (await storage.get("allowedProjects")) || [];
 
-    // Get current project if issue context is available
+    // Get current project from issue context if available
     let currentProject = null;
     const contextKey = req?.context?.extension?.issue?.key;
     if (contextKey) {
@@ -467,24 +495,26 @@ const getAccessInfo = async (req) => {
         : null,
     };
   } catch (error) {
-    console.error("Error getting access info:", error);
     return { error: error.message };
   }
 };
 
 /**
- * Check if current user is a project admin
+ * Checks if the current user is a project administrator
+ * 
+ * @param {string} projectKey - The Jira project key
+ * @returns {Promise<boolean>} True if user has ADMINISTER_PROJECTS permission
  */
 const checkProjectAdminAccess = async (projectKey) => {
   try {
-    // Get current user info
+    // Get current user
     const userRes = await api.asUser().requestJira(route`/rest/api/3/myself`);
     if (!userRes.ok) return false;
     
     const user = await userRes.json();
     const userId = user.accountId;
 
-    // Check if user has project admin permissions
+    // Check project admin permissions
     const permRes = await api.asUser().requestJira(
       route`/rest/api/3/mypermissions?projectKey=${projectKey}&permissions=ADMINISTER_PROJECTS`
     );
@@ -494,45 +524,34 @@ const checkProjectAdminAccess = async (projectKey) => {
     const permissions = await permRes.json();
     return permissions.permissions?.ADMINISTER_PROJECTS?.havePermission || false;
   } catch (error) {
-    console.error("Error checking project admin access:", error);
     return false;
   }
 };
 
 /**
- * Get current project context and settings
+ * Gets project-specific settings and access information
+ * Used by project settings UI to determine current state
+ * 
+ * @param {Object} req - Request object with project context
+ * @returns {Promise<Object>} Project settings including enabled status and permissions
  */
 const getProjectSettings = async (req) => {
   try {
-    console.log("getProjectSettings request:", JSON.stringify(req, null, 2));
-    
-    // Get current project from context - try multiple possible paths for project admin pages
+    // Extract project key from various possible context sources
     let projectKey = req?.context?.extension?.project?.key ||
                     req?.context?.project?.key ||
                     req?.context?.extension?.context?.project?.key ||
                     req?.payload?.projectKey ||
                     req?.projectKey;
     
-    console.log("Project key from context:", projectKey);
-    
-    // If still no project key, try to extract from URL context or other admin page contexts
-    if (!projectKey && req?.context) {
-      console.log("Full context object:", JSON.stringify(req.context, null, 2));
-    }
-    
     if (!projectKey) {
       return { 
         success: false, 
-        message: "No project context available - please ensure you are accessing this from a project settings page",
-        debug: {
-          contextExtension: req?.context?.extension,
-          context: req?.context,
-          payload: req?.payload
-        }
+        message: "No project context available - please ensure you are accessing this from a project settings page"
       };
     }
 
-    // Get project details first
+    // Fetch project details
     const projectRes = await api.asUser().requestJira(route`/rest/api/3/project/${projectKey}`);
     let projectData = { key: projectKey };
     
@@ -545,7 +564,7 @@ const getProjectSettings = async (req) => {
       };
     }
 
-    // Check if project is allowed by site admin
+    // Check site-wide authorization
     const allowedProjects = (await storage.get("allowedProjects")) || [];
     const hasPermission = allowedProjects.includes(projectKey);
     
@@ -558,13 +577,12 @@ const getProjectSettings = async (req) => {
       };
     }
 
-    // Check if user is project admin
+    // Check project admin status
     const isProjectAdmin = await checkProjectAdminAccess(projectKey);
-    console.log("Is project admin:", isProjectAdmin);
 
     // Get project-specific app settings
     const projectSettings = (await storage.get(`project_${projectKey}_settings`)) || {};
-    const isEnabled = projectSettings.enabled !== false; // Default to true if not set
+    const isEnabled = projectSettings.enabled !== false;
     
     return {
       success: true,
@@ -574,7 +592,6 @@ const getProjectSettings = async (req) => {
       isProjectAdmin: isProjectAdmin
     };
   } catch (error) {
-    console.error("Error getting project settings:", error);
     return { 
       success: false, 
       message: error.message 
@@ -583,14 +600,17 @@ const getProjectSettings = async (req) => {
 };
 
 /**
- * Toggle app enablement for a project
+ * Toggles app enablement status for a specific project
+ * Requires project admin permissions
+ * 
+ * @param {Object} req - Request object
+ * @param {boolean} req.payload.enabled - Desired enabled state
+ * @returns {Promise<Object>} Result of toggle operation
  */
 const toggleProjectApp = async (req) => {
   try {
-    console.log("toggleProjectApp request:", JSON.stringify(req, null, 2));
-    
     const { enabled } = req.payload || req;
-    // Get current project from context - try multiple possible paths for project admin pages
+    // Extract project key from context
     const projectKey = req?.context?.extension?.project?.key ||
                       req?.context?.project?.key ||
                       req?.context?.extension?.context?.project?.key ||
@@ -604,7 +624,7 @@ const toggleProjectApp = async (req) => {
       };
     }
 
-    // Check if project is allowed by site admin
+    // Verify site-wide authorization
     const allowedProjects = (await storage.get("allowedProjects")) || [];
     if (!allowedProjects.includes(projectKey)) {
       return {
@@ -613,7 +633,7 @@ const toggleProjectApp = async (req) => {
       };
     }
 
-    // Check if user is project admin
+    // Verify project admin permissions
     const isProjectAdmin = await checkProjectAdminAccess(projectKey);
     if (!isProjectAdmin) {
       return {
@@ -635,7 +655,6 @@ const toggleProjectApp = async (req) => {
       message: `App ${enabled ? 'enabled' : 'disabled'} for project ${projectKey}`
     };
   } catch (error) {
-    console.error("Error toggling project app:", error);
     return { 
       success: false, 
       message: error.message 
@@ -644,7 +663,7 @@ const toggleProjectApp = async (req) => {
 };
 
 /**
- * Register resolver
+ * Register all resolver functions
  */
 const resolver = new Resolver();
 resolver.define("devSuvitha", devSuvitha);
