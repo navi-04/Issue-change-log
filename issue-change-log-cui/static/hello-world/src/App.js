@@ -85,14 +85,16 @@ export default function App() {
   
   // Column filters
   const [filters, setFilters] = useState({
-    author: "",
-    field: "",
+    author: [],
+    field: [],
     from: "",
     to: "",
     date: ""
   });
 
   const [customDateFilter, setCustomDateFilter] = useState("");
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
 
   const userTimeZone = useUserTimeZone();
 
@@ -156,8 +158,32 @@ export default function App() {
       case "1_month":
         return diffInMs < 2592000000; // Less than 30 days
       case "custom":
-        // For custom, we'll use the custom date filter text input
-        return customDateFilter === "" || formatDate(item.date || item.created, userTimeZone).toLowerCase().includes(customDateFilter.toLowerCase());
+        // For custom, check if item date is within the date range
+        if (!customDateFrom && !customDateTo) return true;
+        
+        const itemTimestamp = itemDate.getTime();
+        
+        // If only "from" date is set
+        if (customDateFrom && !customDateTo) {
+          const fromDate = new Date(customDateFrom);
+          fromDate.setHours(0, 0, 0, 0);
+          return itemTimestamp >= fromDate.getTime();
+        }
+        
+        // If only "to" date is set
+        if (!customDateFrom && customDateTo) {
+          const toDate = new Date(customDateTo);
+          toDate.setHours(23, 59, 59, 999);
+          return itemTimestamp <= toDate.getTime();
+        }
+        
+        // If both dates are set
+        const fromDate = new Date(customDateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        const toDate = new Date(customDateTo);
+        toDate.setHours(23, 59, 59, 999);
+        
+        return itemTimestamp >= fromDate.getTime() && itemTimestamp <= toDate.getTime();
       default:
         return true;
     }
@@ -166,19 +192,25 @@ export default function App() {
   // Filter data based on current filters
   const filteredData = useMemo(() => {
     return data.filter(item => {
-      // Author filter
-      const authorMatch = filters.author === "" || (item.author || "").toLowerCase().includes(filters.author.toLowerCase());
+      // Author filter - now supports multiple selections
+      const authorMatch = filters.author.length === 0 || 
+        filters.author.some(authorFilter => 
+          (item.author || "").toLowerCase().includes(authorFilter.value.toLowerCase())
+        );
       
-      // Field filter - handle different types
+      // Field filter - handle different types - now supports multiple selections
       let fieldMatch = true;
-      if (filters.field !== "") {
-        if (item.type === "changelog") {
-          fieldMatch = (item.field || "").toLowerCase().includes(filters.field.toLowerCase());
-        } else if (item.type === "comment") {
-          fieldMatch = "comment".toLowerCase().includes(filters.field.toLowerCase());
-        } else if (item.type === "attachment") {
-          fieldMatch = (item.filename || "").toLowerCase().includes(filters.field.toLowerCase());
-        }
+      if (filters.field.length > 0) {
+        fieldMatch = filters.field.some(fieldFilter => {
+          if (item.type === "changelog") {
+            return (item.field || "").toLowerCase().includes(fieldFilter.value.toLowerCase());
+          } else if (item.type === "comment") {
+            return "comment".toLowerCase().includes(fieldFilter.value.toLowerCase());
+          } else if (item.type === "attachment") {
+            return (item.filename || "").toLowerCase().includes(fieldFilter.value.toLowerCase());
+          }
+          return false;
+        });
       }
       
       // From and To filters
@@ -193,7 +225,7 @@ export default function App() {
       
       return authorMatch && fieldMatch && fromMatch && toMatch && dateMatch;
     });
-  }, [data, filters, userTimeZone, customDateFilter]);
+  }, [data, filters, userTimeZone, customDateFrom, customDateTo]);
 
   // Sort filtered data by date (newest first)
   const sortedData = useMemo(() => {
@@ -360,13 +392,15 @@ export default function App() {
   // Clear all filters
   const clearFilters = () => {
     setFilters({
-      author: "",
-      field: "",
+      author: [],
+      field: [],
       from: "",
       to: "",
       date: ""
     });
     setCustomDateFilter("");
+    setCustomDateFrom("");
+    setCustomDateTo("");
   };
 
   // If there's an access error, show access denied message
@@ -391,136 +425,202 @@ export default function App() {
       {
         key: "author",
         content: (
-          <div>
-            <strong>Author</strong>
-            <div style={{ marginTop: "4px" }}>
-              <Select
-                placeholder="Filter by author..."
-                options={filterOptions.authors}
-                value={filterOptions.authors.find(opt => opt.value === filters.author) || null}
-                onChange={(option) => updateFilter("author", option ? option.value : "")}
-                isClearable
-                isSearchable={true}
-                styles={{
-                  container: (provided) => ({ ...provided, minWidth: "150px" }),
-                  control: (provided) => ({ ...provided, minHeight: "32px" })
-                }}
-              />
+          <div style={{ minWidth: "120px", paddingRight: "15px" }}>
+            <div style={{ marginBottom: "6px", fontWeight: 600, fontSize: "14px", color: "#172b4d" }}>
+              Author
             </div>
+            <Select
+              placeholder="Filter..."
+              options={filterOptions.authors}
+              value={filters.author}
+              onChange={(selectedOptions) => updateFilter("author", selectedOptions || [])}
+              isClearable
+              isSearchable={true}
+              isMulti
+              styles={{
+                container: (provided) => ({ ...provided, width: "100%" }),
+                control: (provided) => ({ 
+                  ...provided, 
+                  minHeight: "39px",
+                  fontSize: "13px"
+                }),
+                multiValue: (provided) => ({
+                  ...provided,
+                  fontSize: "12px"
+                })
+              }}
+            />
+          </div>
+        ),
+        isSortable: false,
+        width: 12
+      },
+      {
+        key: "field",
+        content: (
+          <div style={{ minWidth: "140px", paddingRight: "15px" }}>
+            <div style={{ marginBottom: "6px", fontWeight: 600, fontSize: "14px", color: "#172b4d" }}>
+              Field/Content
+            </div>
+            <Select
+              placeholder="Filter..."
+              options={filterOptions.fields}
+              value={filters.field}
+              onChange={(selectedOptions) => updateFilter("field", selectedOptions || [])}
+              isClearable
+              isSearchable={true}
+              isMulti
+              styles={{
+                container: (provided) => ({ ...provided, width: "100%" }),
+                control: (provided) => ({ 
+                  ...provided, 
+                  minHeight: "39px",
+                  fontSize: "13px"
+                }),
+                multiValue: (provided) => ({
+                  ...provided,
+                  fontSize: "12px"
+                })
+              }}
+            />
+          </div>
+        ),
+        isSortable: false,
+        width: 15
+      },
+      {
+        key: "from",
+        content: (
+          <div style={{ minWidth: "185px", paddingRight: "15px" }}>
+            <div style={{ marginBottom: "6px", fontWeight: 600, fontSize: "14px", color: "#172b4d" }}>
+              From
+            </div>
+            <Textfield
+              placeholder="Filter..."
+              value={filters.from}
+              onChange={(e) => updateFilter("from", e.target.value)}
+              elemAfterInput={
+                filters.from && (
+                  <Button
+                    appearance="subtle"
+                    spacing="compact"
+                    onClick={() => updateFilter("from", "")}
+                  >
+                    ✕
+                  </Button>
+                )
+              }
+            />
           </div>
         ),
         isSortable: false,
         width: 20
       },
       {
-        key: "field",
-        content: (
-          <div>
-            <strong>Field/Content</strong>
-            <div style={{ marginTop: "4px" }}>
-              <Select
-                placeholder="Filter by field..."
-                options={filterOptions.fields}
-                value={filterOptions.fields.find(opt => opt.value === filters.field) || null}
-                onChange={(option) => updateFilter("field", option ? option.value : "")}
-                isClearable
-                isSearchable={true}
-                styles={{
-                  container: (provided) => ({ ...provided, minWidth: "150px" }),
-                  control: (provided) => ({ ...provided, minHeight: "32px" })
-                }}
-              />
-            </div>
-          </div>
-        ),
-        isSortable: false,
-        width: 25
-      },
-      {
-        key: "from",
-        content: (
-          <div>
-            <strong>From</strong>
-            <div style={{ marginTop: "4px" }}>
-              <Textfield
-                placeholder="Filter from value..."
-                value={filters.from}
-                onChange={(e) => updateFilter("from", e.target.value)}
-                elemAfterInput={
-                  filters.from && (
-                    <Button
-                      appearance="subtle"
-                      spacing="compact"
-                      onClick={() => updateFilter("from", "")}
-                    >
-                      ✕
-                    </Button>
-                  )
-                }
-              />
-            </div>
-          </div>
-        ),
-        isSortable: false,
-        width: 15
-      },
-      {
         key: "to",
         content: (
-          <div>
-            <strong>To</strong>
-            <div style={{ marginTop: "4px" }}>
-              <Textfield
-                placeholder="Filter to value..."
-                value={filters.to}
-                onChange={(e) => updateFilter("to", e.target.value)}
-                elemAfterInput={
-                  filters.to && (
-                    <Button
-                      appearance="subtle"
-                      spacing="compact"
-                      onClick={() => updateFilter("to", "")}
-                    >
-                      ✕
-                    </Button>
-                  )
-                }
-              />
+          <div style={{ minWidth: "183px", paddingRight: "15px" }}>
+            <div style={{ marginBottom: "6px", fontWeight: 600, fontSize: "14px", color: "#172b4d" }}>
+              To
             </div>
+            <Textfield
+              placeholder="Filter..."
+              value={filters.to}
+              onChange={(e) => updateFilter("to", e.target.value)}
+              elemAfterInput={
+                filters.to && (
+                  <Button
+                    appearance="subtle"
+                    spacing="compact"
+                    onClick={() => updateFilter("to", "")}
+                  >
+                    ✕
+                  </Button>
+                )
+              }
+            />
           </div>
         ),
         isSortable: false,
-        width: 15
+        width: 20
       },
       {
         key: "date",
         content: (
-          <div>
-            <strong>Date</strong>
-            <div style={{ marginTop: "4px" }}>
-              <Select
-                placeholder="Filter by time..."
-                options={filterOptions.dates}
-                value={filterOptions.dates.find(opt => opt.value === filters.date) || null}
-                onChange={(option) => updateFilter("date", option ? option.value : "")}
-                isClearable
-                isSearchable={false}
-                styles={{
-                  container: (provided) => ({ ...provided, minWidth: "150px" }),
-                  control: (provided) => ({ ...provided, minHeight: "32px" })
-                }}
-              />
-              {filters.date === "custom" && (
-                <div style={{ marginTop: "4px" }}>
-                  <Textfield
-                    placeholder="Enter custom date filter..."
-                    value={customDateFilter}
-                    onChange={(e) => setCustomDateFilter(e.target.value)}
-                    isCompact
-                  />
-                </div>
-              )}
+          <div style={{ minWidth: "160px", paddingRight: "10px" }}>
+            <div style={{ marginBottom: "6px", fontWeight: 600, fontSize: "14px", color: "#172b4d" }}>
+              Date
             </div>
+            <Select
+              placeholder="Filter..."
+              options={filterOptions.dates}
+              value={filterOptions.dates.find(opt => opt.value === filters.date) || null}
+              onChange={(option) => updateFilter("date", option ? option.value : "")}
+              isClearable
+              isSearchable={false}
+              styles={{
+                container: (provided) => ({ ...provided, width: "100%" }),
+                control: (provided) => ({ 
+                  ...provided, 
+                  minHeight: "39px",
+                  fontSize: "13px"
+                })
+              }}
+            />
+            {filters.date === "custom" && (
+              <div style={{ marginTop: "8px" }}>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <div style={{ flex: "1", minWidth: "0" }}>
+                    <label style={{ fontSize: "11px", color: "#6b778c", display: "block", marginBottom: "3px" }}>
+                      From:
+                    </label>
+                    <input
+                      type="date"
+                      value={customDateFrom}
+                      onChange={(e) => setCustomDateFrom(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "4px 6px",
+                        border: "2px solid #dfe1e6",
+                        borderRadius: "3px",
+                        fontSize: "12px",
+                        fontFamily: "inherit",
+                        outline: "none",
+                        transition: "border-color 0.2s",
+                        cursor: "pointer",
+                        boxSizing: "border-box"
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = "#0052cc"}
+                      onBlur={(e) => e.target.style.borderColor = "#dfe1e6"}
+                    />
+                  </div>
+                  <div style={{ flex: "1", minWidth: "0" }}>
+                    <label style={{ fontSize: "11px", color: "#6b778c", display: "block", marginBottom: "3px" }}>
+                      To:
+                    </label>
+                    <input
+                      type="date"
+                      value={customDateTo}
+                      onChange={(e) => setCustomDateTo(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "4px 6px",
+                        border: "2px solid #dfe1e6",
+                        borderRadius: "3px",
+                        fontSize: "12px",
+                        fontFamily: "inherit",
+                        outline: "none",
+                        transition: "border-color 0.2s",
+                        cursor: "pointer",
+                        boxSizing: "border-box"
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = "#0052cc"}
+                      onBlur={(e) => e.target.style.borderColor = "#dfe1e6"}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ),
         isSortable: false,
@@ -535,19 +635,19 @@ export default function App() {
       return [];
     }
     
-    return paginatedData.map((entry, index) => {
+    const dataRows = paginatedData.map((entry, index) => {
       try {
         return {
           key: `row-${currentPage}-${index}`,
           cells: [
             {
               key: "author",
-              content: entry.author || "-"
+              content: <div style={{ paddingLeft: "5px" }}>{entry.author || "-"}</div>
             },
             {
               key: "field",
               content: (
-                <div>
+                <div style={{ paddingLeft: "5px" }}>
                   {entry.type === "changelog" && (
                     <>
                       {entry.field === "status" && "🚦 "}
@@ -565,26 +665,30 @@ export default function App() {
             },
             {
               key: "from",
-              content: entry.type === "changelog" ? (entry.from || "-") : "-"
+              content: <div style={{ paddingLeft: "5px" }}>{entry.type === "changelog" ? (entry.from || "-") : "-"}</div>
             },
             {
               key: "to",
-              content: entry.type === "changelog" 
-                ? (entry.to || "-") 
-                : entry.type === "attachment" 
-                  ? `${Math.round((entry.size || 0) / 1024)}KB` 
-                  : entry.type === "comment"
-                  ? (
-                    <span title={entry.content || ""}>
-                      {(entry.content || "").substring(0, 100) + ((entry.content || "").length > 100 ? "..." : "")}
-                    </span>
-                  )
-                  : "-"
+              content: (
+                <div style={{ paddingLeft: "5px" }}>
+                  {entry.type === "changelog" 
+                    ? (entry.to || "-") 
+                    : entry.type === "attachment" 
+                      ? `${Math.round((entry.size || 0) / 1024)}KB` 
+                      : entry.type === "comment"
+                      ? (
+                        <span title={entry.content || ""}>
+                          {(entry.content || "").substring(0, 100) + ((entry.content || "").length > 100 ? "..." : "")}
+                        </span>
+                      )
+                      : "-"}
+                </div>
+              )
             },
             {
               key: "date",
               content: (
-                <div>
+                <div style={{ paddingLeft: "5px" }}>
                   <div>{formatDate(entry.date || entry.created, userTimeZone)}</div>
                   <div style={{ fontSize: "12px", color: "#6b778c", marginTop: "2px" }}>
                     {getRelativeTime(entry.date || entry.created)}
@@ -599,15 +703,35 @@ export default function App() {
         return {
           key: `error-row-${index}`,
           cells: [
-            { key: "author", content: "Error" },
-            { key: "field", content: "Error loading this row" },
-            { key: "from", content: "-" },
-            { key: "to", content: "-" },
-            { key: "date", content: "-" }
+            { key: "author", content: <div style={{ paddingLeft: "5px" }}>Error</div> },
+            { key: "field", content: <div style={{ paddingLeft: "5px" }}>Error loading this row</div> },
+            { key: "from", content: <div style={{ paddingLeft: "5px" }}>-</div> },
+            { key: "to", content: <div style={{ paddingLeft: "5px" }}>-</div> },
+            { key: "date", content: <div style={{ paddingLeft: "5px" }}>-</div> }
           ]
         };
       }
     });
+
+    // Add empty rows if there are fewer than 5 rows to prevent filter dropdowns from being hidden
+    const minRows = 5;
+    if (dataRows.length < minRows && dataRows.length > 0) {
+      const emptyRowsNeeded = minRows - dataRows.length;
+      for (let i = 0; i < emptyRowsNeeded; i++) {
+        dataRows.push({
+          key: `empty-row-${currentPage}-${i}`,
+          cells: [
+            { key: "author", content: <div style={{ height: "40px" }}>&nbsp;</div> },
+            { key: "field", content: <div style={{ height: "40px" }}>&nbsp;</div> },
+            { key: "from", content: <div style={{ height: "40px" }}>&nbsp;</div> },
+            { key: "to", content: <div style={{ height: "40px" }}>&nbsp;</div> },
+            { key: "date", content: <div style={{ height: "40px" }}>&nbsp;</div> }
+          ]
+        });
+      }
+    }
+
+    return dataRows;
   }, [paginatedData, currentPage, userTimeZone]);
 
   if (loading) {
@@ -636,22 +760,33 @@ export default function App() {
     );
   }
 
-  const hasActiveFilters = Object.values(filters).some(filter => filter !== "") || customDateFilter !== "";
+  const hasActiveFilters = filters.author.length > 0 || filters.field.length > 0 || 
+    filters.from !== "" || filters.to !== "" || filters.date !== "" || 
+    customDateFrom !== "" || customDateTo !== "";
 
   return (
-    <div style={{ padding: "16px" }}>
+    <div style={{ padding: "16px", minWidth: "320px", overflowX: "auto" }}>
+      <style>
+        {`
+          /* Make text fields match Select dropdown height */
+          [data-ds--text-field--container] input {
+            font-size: 13px !important;
+            line-height: 1.5 !important;
+          }
+        `}
+      </style>
       {/* Header with actions */}
       <div style={{ 
         display: "flex", 
         justifyContent: "space-between", 
-        alignItems: "center", 
+        alignItems: "flex-start", 
         marginBottom: "16px",
         flexWrap: "wrap",
-        gap: "8px"
+        gap: "12px"
       }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <h3 style={{ margin: 0, color: "#172b4d" }}>
+        <div style={{ minWidth: "200px", flex: "1 1 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <h3 style={{ margin: 0, color: "#172b4d", fontSize: "clamp(16px, 4vw, 20px)" }}>
               Issue Change Log
             </h3>
             <Button
@@ -664,7 +799,7 @@ export default function App() {
               {loading ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
-          <p style={{ margin: "4px 0 0 0", color: "#6b778c", fontSize: "14px" }}>
+          <p style={{ margin: "4px 0 0 0", color: "#6b778c", fontSize: "clamp(12px, 2.5vw, 14px)" }}>
             {sortedData.length} total {sortedData.length === 1 ? "activity" : "activities"}
             {hasActiveFilters && ` (${filteredData.length} filtered)`}
             {sortedData.length > pageSize && (
@@ -676,11 +811,12 @@ export default function App() {
           </p>
         </div>
         
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
           {hasActiveFilters && (
             <Button 
               appearance="subtle" 
               onClick={clearFilters}
+              spacing="compact"
             >
               Clear Filters
             </Button>
@@ -689,38 +825,43 @@ export default function App() {
             appearance="primary"
             onClick={() => exportCSV(sortedData, userTimeZone)}
             isDisabled={sortedData.length === 0}
+            spacing="compact"
           >
             Export CSV
           </Button>
         </div>
       </div>
 
-      {/* Table */}
-      <DynamicTable
-        head={head}
-        rows={rows}
-        isFixedSize
-        loadingSpinnerSize="large"
-        isLoading={loading || pageLoading}
-        emptyView={
-          <div style={{ textAlign: "center", padding: "32px" }}>
-            <p style={{ fontSize: "16px", margin: "0 0 8px 0", color: "#6b778c" }}>
-              {hasActiveFilters ? "No activities match your current filters" : "No activities found"}
-            </p>
-            <p style={{ fontSize: "14px", margin: "0 0 16px 0", color: "#6b778c" }}>
-              {hasActiveFilters 
-                ? "Try adjusting or clearing your filters to see more results." 
-                : "There are no change log entries for this issue yet."
-              }
-            </p>
-            {hasActiveFilters && (
-              <Button appearance="link" onClick={clearFilters}>
-                Clear all filters
-              </Button>
-            )}
-          </div>
-        }
-      />
+      {/* Table Container with horizontal scroll */}
+      <div style={{ overflowX: "auto", marginBottom: "16px" }}>
+        <div style={{ minWidth: "800px" }}>
+          <DynamicTable
+            head={head}
+            rows={rows}
+            isFixedSize
+            loadingSpinnerSize="large"
+            isLoading={loading || pageLoading}
+            emptyView={
+              <div style={{ textAlign: "center", padding: "32px" }}>
+                <p style={{ fontSize: "16px", margin: "0 0 8px 0", color: "#6b778c" }}>
+                  {hasActiveFilters ? "No activities match your current filters" : "No activities found"}
+                </p>
+                <p style={{ fontSize: "14px", margin: "0 0 16px 0", color: "#6b778c" }}>
+                  {hasActiveFilters 
+                    ? "Try adjusting or clearing your filters to see more results." 
+                    : "There are no change log entries for this issue yet."
+                  }
+                </p>
+                {hasActiveFilters && (
+                  <Button appearance="link" onClick={clearFilters}>
+                    Clear all filters
+                  </Button>
+                )}
+              </div>
+            }
+          />
+        </div>
+      </div>
 
       {/* Custom Pagination */}
       {sortedData.length > 0 && (
@@ -731,7 +872,7 @@ export default function App() {
             alignItems: "center", 
             marginTop: "16px",
             flexWrap: "wrap",
-            gap: "16px"
+            gap: "12px"
           }}
           // Debug logging
           ref={() => console.log('Pagination rendered:', { 
@@ -741,8 +882,8 @@ export default function App() {
             currentPage 
           })}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "14px", color: "#6b778c" }}>Items per page:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "clamp(12px, 2.5vw, 14px)", color: "#6b778c", whiteSpace: "nowrap" }}>Items per page:</span>
             <Select
               value={{ label: pageSize.toString(), value: pageSize }}
               options={[
@@ -759,13 +900,13 @@ export default function App() {
               }}
               isSearchable={false}
               styles={{
-                container: (provided) => ({ ...provided, minWidth: "80px" })
+                container: (provided) => ({ ...provided, minWidth: "80px", maxWidth: "100px" })
               }}
             />
           </div>
 
           {sortedData.length > 0 ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", justifyContent: "center" }}>
               {/* Previous Button */}
               <Button 
                 appearance="subtle" 
@@ -779,13 +920,14 @@ export default function App() {
                   }
                 }}
                 isDisabled={currentPage === 1 || totalPages === 1 || pageLoading}
+                spacing="compact"
               >
-                ← Previous
+                ← Prev
               </Button>
               
               {/* Page Numbers */}
-              {totalPages <= 10 ? (
-                // Show all page numbers if 10 or fewer pages
+              {totalPages <= 7 ? (
+                // Show all page numbers if 7 or fewer pages
                 [...Array(totalPages)].map((_, i) => {
                   const pageNum = i + 1;
                   return (
@@ -809,7 +951,7 @@ export default function App() {
                 })
               ) : (
                 // Show current page info for many pages
-                <span style={{ fontSize: "14px", color: "#6b778c", margin: "0 8px" }}>
+                <span style={{ fontSize: "clamp(12px, 2.5vw, 14px)", color: "#6b778c", margin: "0 4px", whiteSpace: "nowrap" }}>
                   Page {currentPage} of {totalPages}
                 </span>
               )}
@@ -827,14 +969,15 @@ export default function App() {
                   }
                 }}
                 isDisabled={currentPage === totalPages || totalPages === 1 || pageLoading}
+                spacing="compact"
               >
                 Next →
               </Button>
               
               {/* Direct Page Input for many pages */}
-              {totalPages > 10 && (
-                <div style={{ marginLeft: "16px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ fontSize: "14px", color: "#6b778c" }}>Go to:</span>
+              {totalPages > 7 && (
+                <div style={{ marginLeft: "8px", display: "flex", alignItems: "center", gap: "4px", flexWrap: "nowrap" }}>
+                  <span style={{ fontSize: "clamp(12px, 2.5vw, 14px)", color: "#6b778c", whiteSpace: "nowrap" }}>Go to:</span>
                   <input 
                     type="number" 
                     min="1" 
@@ -856,7 +999,7 @@ export default function App() {
                       border: "1px solid #ccc",
                       borderRadius: "3px",
                       textAlign: "center",
-                      fontSize: "14px"
+                      fontSize: "clamp(12px, 2.5vw, 14px)"
                     }}
                   />
                 </div>

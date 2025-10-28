@@ -622,23 +622,6 @@ export default function AdminApp() {
         </div>
       )}
 
-      {/* Info Footer */}
-      <div style={{
-        marginTop: "48px",
-        padding: "16px",
-        background: "#f4f5f7",
-        borderRadius: "4px",
-        fontSize: "12px",
-        color: "#5e6c84"
-      }}>
-        <p style={{ margin: "0 0 8px 0", fontWeight: "600" }}>How it works:</p>
-        <ul style={{ margin: 0, paddingLeft: "16px" }}>
-          <li>Only projects listed above can access the Issue Change Log app</li>
-          <li>Users in unauthorized projects will see an access denied message</li>
-          <li>Site administrators can manage access through this settings page</li>
-          <li>Changes take effect immediately</li>
-        </ul>
-      </div>
     </div>
   );
 }
