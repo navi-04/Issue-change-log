@@ -12,8 +12,10 @@ This Forge app provides detailed change logs for Jira issues with project-level 
 - Real-time updates with pagination
 
 ### 🔒 Project Access Control
-- **Restricted Access**: Only specific projects can use the app
+- **Restricted Access**: Only authorized projects can use the app
+- **No Access by Default**: If no projects are added, no projects can access the app
 - **Admin Management**: Site administrators can add/remove project access
+- **Select All Feature**: Quickly add all available projects at once
 - **Automatic Verification**: Access is checked automatically for each request
 - **Clear Messaging**: Users see clear access denied messages when unauthorized
 
@@ -29,21 +31,26 @@ This Forge app provides detailed change logs for Jira issues with project-level 
 2. **Managing Project Access**:
    - Open the app in any issue (as an admin)
    - Click "Show Admin Panel" button
-   - Add projects using the dropdown selection
-   - Remove projects by clicking the "✕" button next to each project
+   - Add specific projects using the checkbox selection
+   - Use "Select All" checkbox to quickly select all available projects at once
+   - Remove projects by clicking the "Remove" button next to each project
+   - Select multiple projects and use "Remove Selected" for bulk removal
 
 3. **Initial Setup**:
    - When first installed, no projects have access
-   - Admins must manually grant access to each project that should use the app
+   - **Admin must add projects** to grant access
+   - Use the "Select All" checkbox to quickly authorize all projects
    - Projects are identified by their project key (e.g., "KC", "PROJ", "DEMO")
 
 ### For Regular Users
 
+- **Access Control**: Only projects added by admin can access the app
+- **No Default Access**: If no projects are configured by admin, no projects can access the app
 - **Access Granted**: If your project has access, the app works normally
 - **Access Denied**: If your project doesn't have access, you'll see:
   ```
   🔒 Access Restricted
-  Access denied: Project [KEY] is not authorized to use this app
+  This project is not authorized to use the Issue Change Log app
   Please contact your site administrator to request access for this project.
   ```
 

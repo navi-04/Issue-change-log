@@ -225,6 +225,17 @@ export default function AdminApp() {
     }
   };
 
+  /**
+   * Toggles select all/none for adding projects
+   */
+  const toggleAllForAddition = () => {
+    if (selectedProjects.length === filteredAvailableProjects.length) {
+      setSelectedProjects([]);
+    } else {
+      setSelectedProjects(filteredAvailableProjects.map(p => p.key));
+    }
+  };
+
   // Filter projects that don't already have access
   const availableProjects = allProjects.filter(
     project => !allowedProjects.includes(project.key)
@@ -274,7 +285,7 @@ export default function AdminApp() {
         fontSize: "14px",
         marginBottom: "32px" 
       }}>
-        Manage which projects can access the Issue Change Log app. Only authorized projects will be able to view change logs.
+        Manage which projects can access the Issue Change Log app. Only projects added here will be able to use the app.
       </p>
 
       {message && (
@@ -338,16 +349,45 @@ export default function AdminApp() {
         </div>
         
         <div style={{ marginBottom: "16px" }}>
-          <label style={{ 
-            display: "block", 
-            marginBottom: "8px", 
-            fontSize: "12px", 
-            fontWeight: "600",
-            color: "#5e6c84",
-            textTransform: "uppercase"
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "8px"
           }}>
-            Select Projects ({selectedProjects.length} selected)
-          </label>
+            <label style={{ 
+              fontSize: "12px", 
+              fontWeight: "600",
+              color: "#5e6c84",
+              textTransform: "uppercase"
+            }}>
+              Select Projects ({selectedProjects.length} selected)
+            </label>
+            
+            {filteredAvailableProjects.length > 0 && (
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                cursor: "pointer",
+                fontSize: "12px",
+                color: "#0052cc"
+              }}>
+                <input
+                  type="checkbox"
+                  checked={selectedProjects.length === filteredAvailableProjects.length && filteredAvailableProjects.length > 0}
+                  onChange={toggleAllForAddition}
+                  disabled={loading}
+                  style={{ 
+                    marginRight: "6px",
+                    width: "14px",
+                    height: "14px",
+                    cursor: "pointer"
+                  }}
+                />
+                Select All
+              </label>
+            )}
+          </div>
           
           <div style={{ 
             background: "white",
@@ -498,7 +538,7 @@ export default function AdminApp() {
             color: "#856404"
           }}>
             <p style={{ margin: 0, fontSize: "14px" }}>
-              ⚠️ No projects are currently authorized. The app will be inaccessible until you add at least one project.
+              ⚠️ No projects are currently authorized. The app will be inaccessible to all projects until you add at least one project.
             </p>
           </div>
         ) : (

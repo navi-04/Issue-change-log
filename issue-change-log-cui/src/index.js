@@ -26,9 +26,9 @@ const checkProjectAccess = async (projectKey) => {
   try {
     const allowedProjects = (await storage.get("allowedProjects")) || [];
 
-    // Allow access during initial setup if no projects configured
+    // If no projects are configured, deny access to all projects
     if (allowedProjects.length === 0) {
-      return true;
+      return false;
     }
 
     return allowedProjects.includes(projectKey);
