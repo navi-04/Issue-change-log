@@ -4,7 +4,7 @@
  * This script bootstraps the app with initial project access configuration.
  * It can be run once during initial deployment to set up the first projects
  * that will have access to the Issue Change Log app.
- * 
+ * sample line for the command 
  * After initial setup, administrators can manage project access through the
  * Admin UI interface.
  * 
