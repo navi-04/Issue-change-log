@@ -1,13 +1,13 @@
-# Issue Change Log - Complete Documentation
+# Advanced Work Item log - Complete Documentation
 
-Welcome to the comprehensive documentation for the Issue Change Log app. This documentation provides everything you need to install, configure, use, and maintain the application.
+Welcome to the comprehensive documentation for the Advanced Work Item log app. This documentation provides everything you need to install, configure, use, and maintain the application.
 
 ## 📚 Documentation Index
 
 ### Getting Started
 
 1. **[App Overview / Introduction](./01-app-overview.md)**
-   - What is Issue Change Log?
+   - What is Advanced Work Item log?
    - Key benefits and features
    - Target audience and use cases
    - Platform compatibility
@@ -327,7 +327,7 @@ Each document includes:
 
 ## 🚀 Getting Started Guide
 
-### New to Issue Change Log?
+### New to Advanced Work Item log?
 
 **5-Minute Quick Start:**
 1. Read [App Overview](./01-app-overview.md) (5 min)
@@ -438,7 +438,7 @@ See individual documents for specific updates. Each document includes:
 ## 📜 Legal and Licensing
 
 ### Documentation License
-This documentation is part of the Issue Change Log project and is subject to:
+This documentation is part of the Advanced Work Item log project and is subject to:
 - MIT License (for open source version)
 - Copyright notice required
 - Attribution required
@@ -488,7 +488,7 @@ Where this documentation references third-party products or services:
 
 ## ✨ Thank You!
 
-Thank you for using Issue Change Log and reading our documentation. We hope you find it helpful and comprehensive.
+Thank you for using Advanced Work Item log and reading our documentation. We hope you find it helpful and comprehensive.
 
 **Questions? Feedback? Contributions?**
 See [Support and Contact Information](./07-support-contact.md)

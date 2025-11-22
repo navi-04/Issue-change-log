@@ -34,7 +34,7 @@ This document provides comprehensive information about getting support, reportin
 
 **Accessing Marketplace Support:**
 1. Visit Atlassian Marketplace
-2. Search for "Issue Change Log"
+2. Search for "Advanced Work Item log"
 3. Click on the app
 4. Use "Support" tab for questions
 
@@ -305,7 +305,7 @@ Check the [Release Notes](./08-release-notes.md) for current known issues and wo
 
 **Forums:**
 - [Atlassian Community](https://community.atlassian.com/)
-- Search for "Issue Change Log"
+- Search for "Advanced Work Item log"
 - Post questions in Jira Cloud category
 - Tag with relevant keywords
 
@@ -652,7 +652,7 @@ Escalate if:
 
 ## Thank You
 
-Thank you for using Issue Change Log! Your feedback and support help us improve the app for everyone.
+Thank you for using Advanced Work Item log! Your feedback and support help us improve the app for everyone.
 
 **Questions?** Don't hesitate to reach out through any of the support channels listed above.
 

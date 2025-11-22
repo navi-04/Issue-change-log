@@ -1,6 +1,6 @@
 # Quality Assurance
 
-This document outlines the quality assurance processes, testing procedures, and quality standards for the Issue Change Log app.
+This document outlines the quality assurance processes, testing procedures, and quality standards for the Advanced Work Item log app.
 
 ## Table of Contents
 

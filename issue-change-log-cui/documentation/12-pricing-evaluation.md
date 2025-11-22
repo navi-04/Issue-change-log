@@ -1,6 +1,6 @@
 # Pricing and Evaluation
 
-This document provides information about pricing models, evaluation options, and licensing for the Issue Change Log app.
+This document provides information about pricing models, evaluation options, and licensing for the Advanced Work Item log app.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ This document provides information about pricing models, evaluation options, and
 
 ### Pricing Philosophy
 
-Issue Change Log aims to provide value at every scale:
+Advanced Work Item log aims to provide value at every scale:
 - **Transparent Pricing:** No hidden fees or surprise charges
 - **Fair Value:** Priced based on value delivered
 - **Flexible Options:** Plans for teams of all sizes
@@ -454,7 +454,7 @@ During the trial period:
 
 **Scenario: Weekly Change Investigation**
 
-**Without Issue Change Log:**
+**Without Advanced Work Item log:**
 ```
 Manual investigation: 30 minutes per issue
 Issues per week: 10
@@ -463,7 +463,7 @@ Annual time: 260 hours
 Cost (at $75/hour): $19,500/year
 ```
 
-**With Issue Change Log:**
+**With Advanced Work Item log:**
 ```
 Investigation with app: 5 minutes per issue
 Issues per week: 10
@@ -542,7 +542,7 @@ ROI = ((Annual Savings - Annual Cost) / Annual Cost) × 100%
 
 ### vs. Manual Process
 
-| Aspect | Issue Change Log | Manual Process |
+| Aspect | Advanced Work Item log | Manual Process |
 |--------|------------------|----------------|
 | **Time per investigation** | 2-5 minutes | 15-30 minutes |
 | **Export capability** | One-click CSV | Manual copy-paste |
@@ -553,7 +553,7 @@ ROI = ((Annual Savings - Annual Cost) / Annual Cost) × 100%
 
 ### vs. Custom Solution
 
-| Aspect | Issue Change Log | Custom Solution |
+| Aspect | Advanced Work Item log | Custom Solution |
 |--------|------------------|-----------------|
 | **Setup time** | Minutes | Weeks/months |
 | **Development cost** | $0 | $10,000-$50,000+ |

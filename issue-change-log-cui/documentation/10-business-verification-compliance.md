@@ -1,6 +1,6 @@
 # Business Verification and Compliance
 
-This document provides information about business verification, regulatory compliance, certifications, and enterprise readiness of the Issue Change Log app.
+This document provides information about business verification, regulatory compliance, certifications, and enterprise readiness of the Advanced Work Item log app.
 
 ## Table of Contents
 
@@ -26,7 +26,7 @@ This document provides information about business verification, regulatory compl
 - **Repository:** Issue-change-log
 
 **App Information:**
-- **Name:** Issue Change Log
+- **Name:** Advanced Work Item log
 - **Version:** 1.2.15
 - **License:** MIT
 - **Platform:** Atlassian Forge (Jira Cloud)

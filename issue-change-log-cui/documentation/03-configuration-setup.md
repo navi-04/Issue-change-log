@@ -1,10 +1,10 @@
 # Configuration and Setup
 
-This guide covers all configuration options and setup procedures for the Issue Change Log app.
+This guide covers all configuration options and setup procedures for the Advanced Work Item log app.
 
 ## Overview
 
-The Issue Change Log app uses a **two-tier access control system**:
+The Advanced Work Item log app uses a **two-tier access control system**:
 
 1. **Site-Level Authorization** (Managed by Jira Administrators)
 2. **Project-Level Enablement** (Managed by Project Administrators)

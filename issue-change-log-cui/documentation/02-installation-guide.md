@@ -1,10 +1,10 @@
 # Installation Guide
 
-This guide will walk you through the complete installation process for the Issue Change Log app.
+This guide will walk you through the complete installation process for the Advanced Work Item log app.
 
 ## Prerequisites
 
-Before installing the Issue Change Log app, ensure you have:
+Before installing the Advanced Work Item log app, ensure you have:
 
 ### **System Requirements**
 - ✅ Active Jira Cloud instance
@@ -34,7 +34,7 @@ Before installing the Issue Change Log app, ensure you have:
    - Sign in with your Atlassian account
 
 2. **Search for the App**
-   - Search for "Issue Change Log" in the marketplace
+   - Search for "Advanced Work Item log" in the marketplace
    - Click on the app to view details
 
 3. **Install the App**
@@ -149,7 +149,7 @@ As a Jira administrator, you need to authorize projects:
 
 1. **Access Admin Settings**
    - Go to **Jira Settings** → **Apps** → **Manage apps**
-   - Find "Issue Change Log" in the list
+   - Find "Advanced Work Item log" in the list
    - Click **"Issue ChangeLog Settings"**
 
 2. **Authorize Projects**
@@ -253,7 +253,7 @@ This is expected behavior! By design, no projects have access until explicitly a
 ### Via Jira UI
 
 1. Go to **Jira Settings** → **Apps** → **Manage apps**
-2. Find "Issue Change Log"
+2. Find "Advanced Work Item log"
 3. Click **"Uninstall"**
 4. Confirm the uninstallation
 

@@ -5,9 +5,9 @@
 
 ## Introduction
 
-This Privacy Policy describes how Issue Change Log ("the App", "we", "us", or "our") collects, uses, and protects information when you use our Jira Cloud application.
+This Privacy Policy describes how Advanced Work Item log ("the App", "we", "us", or "our") collects, uses, and protects information when you use our Jira Cloud application.
 
-**By using Issue Change Log, you agree to the collection and use of information in accordance with this policy.**
+**By using Advanced Work Item log, you agree to the collection and use of information in accordance with this policy.**
 
 ---
 
@@ -128,7 +128,7 @@ We do NOT:
 
 ### We Do Not Share Your Data
 
-Issue Change Log does NOT share, sell, or disclose your data to third parties.
+Advanced Work Item log does NOT share, sell, or disclose your data to third parties.
 
 ### Limited Disclosure Scenarios
 
@@ -250,7 +250,7 @@ You have the following rights regarding your data:
 
 ### No Cookies or Tracking
 
-**Issue Change Log does NOT use:**
+**Advanced Work Item log does NOT use:**
 - ❌ Cookies
 - ❌ Web beacons
 - ❌ Analytics tracking
@@ -461,7 +461,7 @@ If you are in the European Union and believe we have not adequately addressed yo
 
 **This Privacy Policy is effective as of January 1, 2024.**
 
-**By using Issue Change Log, you acknowledge that you have read, understood, and agree to be bound by this Privacy Policy.**
+**By using Advanced Work Item log, you acknowledge that you have read, understood, and agree to be bound by this Privacy Policy.**
 
 **If you do not agree with this Privacy Policy, please do not use the App.**
 

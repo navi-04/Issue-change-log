@@ -1,6 +1,6 @@
 # Features and Capabilities
 
-This document provides a comprehensive overview of all features and capabilities of the Issue Change Log app.
+This document provides a comprehensive overview of all features and capabilities of the Advanced Work Item log app.
 
 ## Core Features
 

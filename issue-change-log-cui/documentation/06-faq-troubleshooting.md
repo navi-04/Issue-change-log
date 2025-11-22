@@ -19,9 +19,9 @@ This document provides answers to frequently asked questions and solutions to co
 
 ## General Questions
 
-### What is Issue Change Log?
+### What is Advanced Work Item log?
 
-Issue Change Log is a Jira Cloud app that tracks and displays all changes made to Jira issues, including field modifications, comments, and attachments. It provides filtering, export capabilities, and granular access control.
+Advanced Work Item log is a Jira Cloud app that tracks and displays all changes made to Jira issues, including field modifications, comments, and attachments. It provides filtering, export capabilities, and granular access control.
 
 ### Who can use this app?
 
@@ -40,7 +40,7 @@ Both must be configured for the app to work.
 
 ### Does this work with Jira Data Center or Server?
 
-No. Issue Change Log is built on Atlassian Forge, which only supports Jira Cloud. It is not compatible with Jira Data Center or Server.
+No. Advanced Work Item log is built on Atlassian Forge, which only supports Jira Cloud. It is not compatible with Jira Data Center or Server.
 
 ### How much does it cost?
 
@@ -58,7 +58,7 @@ Pricing information is available on the Atlassian Marketplace listing. See [Pric
 2. **Clear browser cache**
 3. **Verify installation:**
    - Go to **Jira Settings** → **Apps** → **Manage apps**
-   - Confirm "Issue Change Log" is listed and enabled
+   - Confirm "Advanced Work Item log" is listed and enabled
 4. **Check project authorization:**
    - The app won't work until projects are authorized by an administrator
 
@@ -83,7 +83,7 @@ Pricing information is available on the Atlassian Marketplace listing. See [Pric
 
 **Via Jira UI:**
 1. Go to **Jira Settings** → **Apps** → **Manage apps**
-2. Find "Issue Change Log"
+2. Find "Advanced Work Item log"
 3. Click **Uninstall**
 4. Confirm
 
@@ -352,7 +352,7 @@ Fastest → Slowest:
 
 ## Error Messages
 
-### Q: "This project is not authorized to use the Issue Change Log app"
+### Q: "This project is not authorized to use the Advanced Work Item log app"
 
 **A:** This is the expected access control message.
 
@@ -368,7 +368,7 @@ Fastest → Slowest:
 - Request authorization for your project
 - Provide project key (e.g., "KC", "PROJ")
 
-### Q: "The Issue Change Log app has been disabled for this project"
+### Q: "The Advanced Work Item log app has been disabled for this project"
 
 **A:** The app was disabled by a project administrator.
 
@@ -411,7 +411,7 @@ Fastest → Slowest:
 1. **Refresh the page**
 2. **Verify app permissions:**
    - Go to **Jira Settings** → **Apps** → **Manage apps**
-   - Click on Issue Change Log
+   - Click on Advanced Work Item log
    - Verify `read:jira-work` permission is granted
 3. **Check Atlassian status:**
    - Visit [status.atlassian.com](https://status.atlassian.com)
@@ -736,4 +736,4 @@ Found an issue not covered here? Help improve this documentation:
 2. Submit via support channels
 3. We'll add it to future versions
 
-Your feedback helps everyone! Thank you for using Issue Change Log.
+Your feedback helps everyone! Thank you for using Advanced Work Item log.

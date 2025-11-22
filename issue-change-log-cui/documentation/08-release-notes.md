@@ -1,6 +1,6 @@
 # Release Notes / Changelog
 
-This document contains the version history, release notes, and changelog for the Issue Change Log app.
+This document contains the version history, release notes, and changelog for the Advanced Work Item log app.
 
 ## Current Version
 
@@ -439,7 +439,7 @@ Runtime: Node.js 22.x
 
 ## Thank You
 
-Thank you to everyone who has used, tested, and provided feedback on Issue Change Log!
+Thank you to everyone who has used, tested, and provided feedback on Advanced Work Item log!
 
 **Special Thanks:**
 - Beta testers

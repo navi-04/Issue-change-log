@@ -5,7 +5,7 @@ This document contains the content and assets for the Atlassian Marketplace list
 ## Marketplace Overview
 
 ### App Name
-**Issue Change Log**
+**Advanced Work Item log**
 
 ### Tagline
 Track every change, comment, and attachment in your Jira issues with powerful filtering and export capabilities.
@@ -18,7 +18,7 @@ Track, filter, and export comprehensive change logs for Jira issues easily.
 ## Long Description
 
 ### Overview
-Issue Change Log is a powerful Atlassian Forge app that provides comprehensive tracking and visualization of all changes made to Jira issues. Monitor field modifications, comments, and attachments with advanced filtering and export capabilities.
+Advanced Work Item log is a powerful Atlassian Forge app that provides comprehensive tracking and visualization of all changes made to Jira issues. Monitor field modifications, comments, and attachments with advanced filtering and export capabilities.
 
 ### Key Features
 
@@ -92,7 +92,7 @@ Monitor how issues evolve through different stages and identify patterns in work
 **Historical Analysis**
 Analyze patterns in issue modifications over time to improve processes and workflows.
 
-### Why Choose Issue Change Log?
+### Why Choose Advanced Work Item log?
 
 ✅ **No External Storage** - All data stays within your Jira instance
 ✅ **Built on Forge** - Enterprise-grade security and scalability
@@ -152,7 +152,7 @@ scrum, workflow, analytics, documentation, transparency
 ## Screenshots
 
 ### 1. Main Issue Panel
-**Title:** Issue Change Log Panel
+**Title:** Advanced Work Item log Panel
 **Description:** View comprehensive change history directly in the issue panel with time-based filtering and export options.
 **Caption:** Track all changes, comments, and attachments in one place
 
@@ -181,13 +181,13 @@ scrum, workflow, analytics, documentation, transparency
 ## Demo Video Script
 
 ### Introduction (0:00-0:15)
-"Introducing Issue Change Log - the comprehensive solution for tracking all changes in your Jira issues."
+"Introducing Advanced Work Item log - the comprehensive solution for tracking all changes in your Jira issues."
 
 ### Problem Statement (0:15-0:30)
 "Ever wondered when a critical field was changed, or who modified an issue? Need to export change history for compliance?"
 
 ### Solution Overview (0:30-1:00)
-"Issue Change Log provides complete visibility into issue history with:
+"Advanced Work Item log provides complete visibility into issue history with:
 - All field changes, comments, and attachments
 - Advanced time-based filtering
 - One-click CSV export
@@ -208,7 +208,7 @@ scrum, workflow, analytics, documentation, transparency
 - Process improvement"
 
 ### Call to Action (3:00-3:15)
-"Install Issue Change Log today and gain complete visibility into your Jira issue history. Available now on the Atlassian Marketplace."
+"Install Advanced Work Item log today and gain complete visibility into your Jira issue history. Available now on the Atlassian Marketplace."
 
 ---
 
@@ -266,14 +266,14 @@ scrum, workflow, analytics, documentation, transparency
 
 ### General Questions
 
-**Q: What is Issue Change Log?**
-A: Issue Change Log is a Jira Cloud app that tracks and displays all changes made to issues, including field modifications, comments, and attachments, with filtering and export capabilities.
+**Q: What is Advanced Work Item log?**
+A: Advanced Work Item log is a Jira Cloud app that tracks and displays all changes made to issues, including field modifications, comments, and attachments, with filtering and export capabilities.
 
 **Q: Is my data stored outside Jira?**
 A: No. The app only reads data from Jira in real-time. Only minimal configuration data (project access lists) is stored in Forge app storage, which is part of the Atlassian platform.
 
 **Q: Does it work with Jira Data Center or Server?**
-A: No. Issue Change Log is built on Atlassian Forge, which only supports Jira Cloud.
+A: No. Advanced Work Item log is built on Atlassian Forge, which only supports Jira Cloud.
 
 ### Installation and Setup
 
@@ -323,7 +323,7 @@ A: [Trial information to be determined based on Marketplace strategy]
 
 ## Customer Testimonials
 
-> "Issue Change Log has become an essential tool for our compliance audits. The export feature saves us hours of manual work every month."
+> "Advanced Work Item log has become an essential tool for our compliance audits. The export feature saves us hours of manual work every month."
 > 
 > — IT Manager, Financial Services Company
 
@@ -343,9 +343,9 @@ A: [Trial information to be determined based on Marketplace strategy]
 
 ## Comparison with Alternatives
 
-### Why Issue Change Log?
+### Why Advanced Work Item log?
 
-| Feature | Issue Change Log | Alternative Solutions |
+| Feature | Advanced Work Item log | Alternative Solutions |
 |---------|------------------|----------------------|
 | **Security** | Two-tier access control, zero-trust | Often single-tier or always-on |
 | **Data Storage** | No external storage | Often stores data externally |
@@ -371,7 +371,7 @@ A: [Trial information to be determined based on Marketplace strategy]
 ## App Listing Metadata
 
 **Developer Name:** navi-04
-**App Name:** Issue Change Log
+**App Name:** Advanced Work Item log
 **App Key:** issue-change-log-cui
 **Version:** 1.2.15
 **Category:** Project Management & Tracking

@@ -5,7 +5,7 @@
 
 ## Agreement to Terms
 
-By accessing or using Issue Change Log ("the App", "Service", "we", "us", or "our"), you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part of the terms, you may not access the Service.
+By accessing or using Advanced Work Item log ("the App", "Service", "we", "us", or "our"), you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part of the terms, you may not access the Service.
 
 ---
 
@@ -31,7 +31,7 @@ By accessing or using Issue Change Log ("the App", "Service", "we", "us", or "ou
 
 ## Definitions
 
-**"App" or "Service"** refers to Issue Change Log, a Jira Cloud application built on Atlassian Forge.
+**"App" or "Service"** refers to Advanced Work Item log, a Jira Cloud application built on Atlassian Forge.
 
 **"User", "You", or "Your"** refers to the individual or entity using the App.
 
@@ -156,7 +156,7 @@ You must:
 ### App Ownership
 
 **Our Rights:**
-- Issue Change Log and its original code are open source (MIT License)
+- Advanced Work Item log and its original code are open source (MIT License)
 - App name, logos, and trademarks are our property
 - Documentation and materials are protected by copyright
 
@@ -543,7 +543,7 @@ If moved to paid model:
 
 ## Acknowledgment
 
-**BY USING ISSUE CHANGE LOG, YOU ACKNOWLEDGE THAT:**
+**BY USING Advanced Work Item log, YOU ACKNOWLEDGE THAT:**
 
 ✅ You have read these Terms
 ✅ You understand these Terms

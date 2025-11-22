@@ -1,12 +1,12 @@
-# Issue Change Log - App Overview
+# Advanced Work Item log - App Overview
 
 ## Introduction
 
-The **Issue Change Log** is a powerful Atlassian Forge application designed for Jira that provides comprehensive tracking and visualization of all changes made to Jira issues. This app enables teams to maintain complete audit trails, monitor issue evolution, and enhance transparency in their project workflows.
+The **Advanced Work Item log** is a powerful Atlassian Forge application designed for Jira that provides comprehensive tracking and visualization of all changes made to Jira issues. This app enables teams to maintain complete audit trails, monitor issue evolution, and enhance transparency in their project workflows.
 
-## What is Issue Change Log?
+## What is Advanced Work Item log?
 
-Issue Change Log is a native Jira app that displays detailed change history for issues including:
+Advanced Work Item log is a native Jira app that displays detailed change history for issues including:
 - Field modifications and updates
 - Comments and their revisions
 - Attachments and file uploads
@@ -91,7 +91,7 @@ Analyze patterns in issue modifications over time to improve processes and workf
 
 ## Architecture
 
-Issue Change Log is built on the **Atlassian Forge platform**, which provides:
+Advanced Work Item log is built on the **Atlassian Forge platform**, which provides:
 - Secure, isolated runtime environment
 - Built-in authentication and authorization
 - Direct integration with Jira APIs

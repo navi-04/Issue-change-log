@@ -1,6 +1,6 @@
 # Security and Privacy
 
-This document provides comprehensive information about security measures, data privacy, and compliance considerations for the Issue Change Log app.
+This document provides comprehensive information about security measures, data privacy, and compliance considerations for the Advanced Work Item log app.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ This document provides comprehensive information about security measures, data p
 
 ### Security Model
 
-Issue Change Log is built on the **Atlassian Forge platform**, which provides enterprise-grade security:
+Advanced Work Item log is built on the **Atlassian Forge platform**, which provides enterprise-grade security:
 
 **Platform Security:**
 - ✅ Secure, isolated runtime environment

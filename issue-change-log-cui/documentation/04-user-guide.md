@@ -1,6 +1,6 @@
 # User Guide / Usage Instructions
 
-This comprehensive guide will help you effectively use the Issue Change Log app to track, analyze, and export Jira issue changes.
+This comprehensive guide will help you effectively use the Advanced Work Item log app to track, analyze, and export Jira issue changes.
 
 ## Table of Contents
 
