@@ -8,7 +8,9 @@ import Spinner from "@atlaskit/spinner";
 import Lozenge from "@atlaskit/lozenge";
 import Banner from "@atlaskit/banner";
 import Pagination from "@atlaskit/pagination";
+import Tabs, { Tab, TabList, TabPanel } from "@atlaskit/tabs";
 import "@atlaskit/css-reset";
+import Dashboard from "./Dashboard";
 
 const currentDev = "devSuvitha";
 
@@ -59,9 +61,19 @@ const exportCSV = (data, timeZone) => {
   const rows = data.map((row) =>
     [
       row.author,
-      row.type === "changelog" ? row.field : (row.type === "comment" ? "Comment" : (row.filename || "")),
-      row.type === "changelog" ? (row.from || "-") : "-",
-      row.type === "changelog" ? (row.to || "-") : (row.type === "attachment" ? `${Math.round(row.size / 1024)}KB` : (row.type === "comment" ? row.content : "-")),
+      row.type === "changelog"
+        ? row.field
+        : row.type === "comment"
+        ? "Comment"
+        : row.filename || "",
+      row.type === "changelog" ? row.from || "-" : "-",
+      row.type === "changelog"
+        ? row.to || "-"
+        : row.type === "attachment"
+        ? `${Math.round(row.size / 1024)}KB`
+        : row.type === "comment"
+        ? row.content
+        : "-",
       formatDate(row.date || row.created, timeZone),
     ].join(",")
   );
@@ -76,19 +88,20 @@ const exportCSV = (data, timeZone) => {
 };
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState(0);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  
+
   // Column filters
   const [filters, setFilters] = useState({
     author: "",
     field: "",
     from: "",
     to: "",
-    date: ""
+    date: "",
   });
 
   const [customDateFilter, setCustomDateFilter] = useState("");
@@ -98,13 +111,15 @@ export default function App() {
   // Generate filter options from data
   const filterOptions = useMemo(() => {
     // Get unique authors
-    const authors = [...new Set(data.map(item => item.author).filter(Boolean))]
+    const authors = [
+      ...new Set(data.map((item) => item.author).filter(Boolean)),
+    ]
       .sort()
-      .map(author => ({ label: author, value: author }));
+      .map((author) => ({ label: author, value: author }));
 
     // Get unique fields (including special handling for comments and attachments)
     const fields = new Set();
-    data.forEach(item => {
+    data.forEach((item) => {
       if (item.type === "changelog" && item.field) {
         fields.add(item.field);
       } else if (item.type === "comment") {
@@ -113,7 +128,9 @@ export default function App() {
         fields.add(item.filename);
       }
     });
-    const fieldOptions = [...fields].sort().map(field => ({ label: field, value: field }));
+    const fieldOptions = [...fields]
+      .sort()
+      .map((field) => ({ label: field, value: field }));
 
     // Date filter options
     const dateOptions = [
@@ -123,24 +140,24 @@ export default function App() {
       { label: "3 days ago", value: "3_days" },
       { label: "1 week ago", value: "1_week" },
       { label: "1 month ago", value: "1_month" },
-      { label: "Custom", value: "custom" }
+      { label: "Custom", value: "custom" },
     ];
 
     return {
       authors,
       fields: fieldOptions,
-      dates: dateOptions
+      dates: dateOptions,
     };
   }, [data]);
 
   // Helper function to check if an item matches the date filter
   const matchesDateFilter = (item, filterValue) => {
     if (!filterValue || filterValue === "") return true;
-    
+
     const itemDate = new Date(item.date || item.created);
     const now = new Date();
     const diffInMs = now - itemDate;
-    
+
     switch (filterValue) {
       case "just_now":
         return diffInMs < 60000; // Less than 1 minute
@@ -156,7 +173,12 @@ export default function App() {
         return diffInMs < 2592000000; // Less than 30 days
       case "custom":
         // For custom, we'll use the custom date filter text input
-        return customDateFilter === "" || formatDate(item.date || item.created, userTimeZone).toLowerCase().includes(customDateFilter.toLowerCase());
+        return (
+          customDateFilter === "" ||
+          formatDate(item.date || item.created, userTimeZone)
+            .toLowerCase()
+            .includes(customDateFilter.toLowerCase())
+        );
       default:
         return true;
     }
@@ -164,32 +186,54 @@ export default function App() {
 
   // Filter data based on current filters
   const filteredData = useMemo(() => {
-    return data.filter(item => {
+    return data.filter((item) => {
       // Author filter
-      const authorMatch = filters.author === "" || (item.author || "").toLowerCase().includes(filters.author.toLowerCase());
-      
+      const authorMatch =
+        filters.author === "" ||
+        (item.author || "")
+          .toLowerCase()
+          .includes(filters.author.toLowerCase());
+
       // Field filter - handle different types
       let fieldMatch = true;
       if (filters.field !== "") {
         if (item.type === "changelog") {
-          fieldMatch = (item.field || "").toLowerCase().includes(filters.field.toLowerCase());
+          fieldMatch = (item.field || "")
+            .toLowerCase()
+            .includes(filters.field.toLowerCase());
         } else if (item.type === "comment") {
-          fieldMatch = "comment".toLowerCase().includes(filters.field.toLowerCase());
+          fieldMatch = "comment"
+            .toLowerCase()
+            .includes(filters.field.toLowerCase());
         } else if (item.type === "attachment") {
-          fieldMatch = (item.filename || "").toLowerCase().includes(filters.field.toLowerCase());
+          fieldMatch = (item.filename || "")
+            .toLowerCase()
+            .includes(filters.field.toLowerCase());
         }
       }
-      
+
       // From and To filters
-      const fromMatch = filters.from === "" || (item.from || "").toLowerCase().includes(filters.from.toLowerCase());
-      const toMatch = filters.to === "" || 
-        (item.type === "changelog" ? (item.to || "").toLowerCase().includes(filters.to.toLowerCase()) :
-         item.type === "attachment" ? `${Math.round(item.size / 1024)}KB`.toLowerCase().includes(filters.to.toLowerCase()) :
-         item.type === "comment" ? (item.content || "").toLowerCase().includes(filters.to.toLowerCase()) : true);
-      
+      const fromMatch =
+        filters.from === "" ||
+        (item.from || "").toLowerCase().includes(filters.from.toLowerCase());
+      const toMatch =
+        filters.to === "" ||
+        (item.type === "changelog"
+          ? (item.to || "").toLowerCase().includes(filters.to.toLowerCase())
+          : item.type === "attachment"
+          ? `${Math.round(item.size / 1024)}KB`
+              .toLowerCase()
+              .includes(filters.to.toLowerCase())
+          : item.type === "comment"
+          ? (item.content || "")
+              .toLowerCase()
+              .includes(filters.to.toLowerCase())
+          : true);
+
       // Date filter
-      const dateMatch = filters.date === "" || matchesDateFilter(item, filters.date);
-      
+      const dateMatch =
+        filters.date === "" || matchesDateFilter(item, filters.date);
+
       return authorMatch && fieldMatch && fromMatch && toMatch && dateMatch;
     });
   }, [data, filters, userTimeZone, customDateFilter]);
@@ -216,11 +260,11 @@ export default function App() {
       try {
         console.log("Fetching data...");
         const result = await invoke(currentDev, {
-          filter: "all" // Always fetch all data, filter on frontend
+          filter: "all", // Always fetch all data, filter on frontend
         });
-        
+
         console.log("Result received:", result);
-        
+
         if (result && result.error) {
           setError(result.error);
           setData([]);
@@ -233,7 +277,7 @@ export default function App() {
             ...(result.comments || []),
             ...(result.attachments || []),
           ];
-          
+
           // Deduplicate
           const seen = new Set();
           const uniqueActivities = allActivities.filter((item) => {
@@ -261,7 +305,7 @@ export default function App() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
     // Removed automatic refresh - now using manual refresh button
   }, []);
@@ -273,11 +317,11 @@ export default function App() {
     try {
       console.log("Manual refresh triggered...");
       const result = await invoke(currentDev, {
-        filter: "all"
+        filter: "all",
       });
-      
+
       console.log("Result received:", result);
-      
+
       if (result && result.error) {
         setError(result.error);
         setData([]);
@@ -290,7 +334,7 @@ export default function App() {
           ...(result.comments || []),
           ...(result.attachments || []),
         ];
-        
+
         // Deduplicate
         const seen = new Set();
         const uniqueActivities = allActivities.filter((item) => {
@@ -326,7 +370,7 @@ export default function App() {
 
   // Update a specific filter
   const updateFilter = (column, value) => {
-    setFilters(prev => ({ ...prev, [column]: value }));
+    setFilters((prev) => ({ ...prev, [column]: value }));
   };
 
   // Clear all filters
@@ -336,7 +380,7 @@ export default function App() {
       field: "",
       from: "",
       to: "",
-      date: ""
+      date: "",
     });
     setCustomDateFilter("");
   };
@@ -349,8 +393,9 @@ export default function App() {
           <strong>Access Restricted</strong>
           <p>{error}</p>
           <p style={{ fontSize: "14px", marginTop: "8px" }}>
-            Please contact your site administrator to request access for this project.
-            Admin can manage project access in Jira Settings → Apps → Issue Change Log Settings.
+            Please contact your site administrator to request access for this
+            project. Admin can manage project access in Jira Settings → Apps →
+            Issue Change Log Settings.
           </p>
         </Banner>
       </div>
@@ -369,20 +414,26 @@ export default function App() {
               <Select
                 placeholder="Filter by author..."
                 options={filterOptions.authors}
-                value={filterOptions.authors.find(opt => opt.value === filters.author) || null}
-                onChange={(option) => updateFilter("author", option ? option.value : "")}
+                value={
+                  filterOptions.authors.find(
+                    (opt) => opt.value === filters.author
+                  ) || null
+                }
+                onChange={(option) =>
+                  updateFilter("author", option ? option.value : "")
+                }
                 isClearable
                 isSearchable={true}
                 styles={{
                   container: (provided) => ({ ...provided, minWidth: "150px" }),
-                  control: (provided) => ({ ...provided, minHeight: "32px" })
+                  control: (provided) => ({ ...provided, minHeight: "32px" }),
                 }}
               />
             </div>
           </div>
         ),
         isSortable: false,
-        width: 20
+        width: 20,
       },
       {
         key: "field",
@@ -393,20 +444,26 @@ export default function App() {
               <Select
                 placeholder="Filter by field..."
                 options={filterOptions.fields}
-                value={filterOptions.fields.find(opt => opt.value === filters.field) || null}
-                onChange={(option) => updateFilter("field", option ? option.value : "")}
+                value={
+                  filterOptions.fields.find(
+                    (opt) => opt.value === filters.field
+                  ) || null
+                }
+                onChange={(option) =>
+                  updateFilter("field", option ? option.value : "")
+                }
                 isClearable
                 isSearchable={true}
                 styles={{
                   container: (provided) => ({ ...provided, minWidth: "150px" }),
-                  control: (provided) => ({ ...provided, minHeight: "32px" })
+                  control: (provided) => ({ ...provided, minHeight: "32px" }),
                 }}
               />
             </div>
           </div>
         ),
         isSortable: false,
-        width: 25
+        width: 25,
       },
       {
         key: "from",
@@ -434,7 +491,7 @@ export default function App() {
           </div>
         ),
         isSortable: false,
-        width: 15
+        width: 15,
       },
       {
         key: "to",
@@ -462,7 +519,7 @@ export default function App() {
           </div>
         ),
         isSortable: false,
-        width: 15
+        width: 15,
       },
       {
         key: "date",
@@ -473,13 +530,19 @@ export default function App() {
               <Select
                 placeholder="Filter by time..."
                 options={filterOptions.dates}
-                value={filterOptions.dates.find(opt => opt.value === filters.date) || null}
-                onChange={(option) => updateFilter("date", option ? option.value : "")}
+                value={
+                  filterOptions.dates.find(
+                    (opt) => opt.value === filters.date
+                  ) || null
+                }
+                onChange={(option) =>
+                  updateFilter("date", option ? option.value : "")
+                }
                 isClearable
                 isSearchable={false}
                 styles={{
                   container: (provided) => ({ ...provided, minWidth: "150px" }),
-                  control: (provided) => ({ ...provided, minHeight: "32px" })
+                  control: (provided) => ({ ...provided, minHeight: "32px" }),
                 }}
               />
               {filters.date === "custom" && (
@@ -496,9 +559,9 @@ export default function App() {
           </div>
         ),
         isSortable: false,
-        width: 20
-      }
-    ]
+        width: 20,
+      },
+    ],
   };
 
   // Create table rows
@@ -507,7 +570,7 @@ export default function App() {
     cells: [
       {
         key: "author",
-        content: entry.author || "-"
+        content: entry.author || "-",
       },
       {
         key: "field",
@@ -521,56 +584,59 @@ export default function App() {
                 {entry.field || "-"}
               </>
             )}
-            {entry.type === "comment" && (
-              <span>💬 Comment</span>
-            )}
+            {entry.type === "comment" && <span>💬 Comment</span>}
             {entry.type === "attachment" && entry.filename}
           </div>
-        )
+        ),
       },
       {
         key: "from",
-        content: entry.type === "changelog" ? (entry.from || "-") : "-"
+        content: entry.type === "changelog" ? entry.from || "-" : "-",
       },
       {
         key: "to",
-        content: entry.type === "changelog" 
-          ? (entry.to || "-") 
-          : entry.type === "attachment" 
-            ? `${Math.round(entry.size / 1024)}KB` 
-            : entry.type === "comment"
-            ? (
-              <span title={entry.content}>
-                {entry.content || "-"}
-              </span>
-            )
-            : "-"
+        content:
+          entry.type === "changelog" ? (
+            entry.to || "-"
+          ) : entry.type === "attachment" ? (
+            `${Math.round(entry.size / 1024)}KB`
+          ) : entry.type === "comment" ? (
+            <span title={entry.content}>{entry.content || "-"}</span>
+          ) : (
+            "-"
+          ),
       },
       {
         key: "date",
         content: (
           <div>
             <div>{formatDate(entry.date || entry.created, userTimeZone)}</div>
-            <div style={{ fontSize: "12px", color: "#6b778c", marginTop: "2px" }}>
+            <div
+              style={{ fontSize: "12px", color: "#6b778c", marginTop: "2px" }}
+            >
               {getRelativeTime(entry.date || entry.created)}
             </div>
           </div>
-        )
-      }
-    ]
+        ),
+      },
+    ],
   }));
 
   if (loading) {
     return (
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        alignItems: "center", 
-        minHeight: "200px",
-        flexDirection: "column"
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "200px",
+          flexDirection: "column",
+        }}
+      >
         <Spinner size="large" />
-        <p style={{ marginTop: "16px", color: "#6b778c" }}>Loading change log...</p>
+        <p style={{ marginTop: "16px", color: "#6b778c" }}>
+          Loading change log...
+        </p>
       </div>
     );
   }
@@ -586,24 +652,27 @@ export default function App() {
     );
   }
 
-  const hasActiveFilters = Object.values(filters).some(filter => filter !== "") || customDateFilter !== "";
+  const hasActiveFilters =
+    Object.values(filters).some((filter) => filter !== "") ||
+    customDateFilter !== "";
 
-  return (
+  // Render the Activities tab content
+  const renderActivitiesTab = () => (
     <div style={{ padding: "16px" }}>
       {/* Header with actions */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center", 
-        marginBottom: "16px",
-        flexWrap: "wrap",
-        gap: "8px"
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "16px",
+          flexWrap: "wrap",
+          gap: "8px",
+        }}
+      >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <h3 style={{ margin: 0, color: "#172b4d" }}>
-              Issue Change Log
-            </h3>
+            <h3 style={{ margin: 0, color: "#172b4d" }}>Issue Activities</h3>
             <Button
               appearance="primary"
               onClick={handleManualRefresh}
@@ -614,18 +683,18 @@ export default function App() {
               {loading ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
-          <p style={{ margin: "4px 0 0 0", color: "#6b778c", fontSize: "14px" }}>
-            {sortedData.length} total {sortedData.length === 1 ? "activity" : "activities"}
+          <p
+            style={{ margin: "4px 0 0 0", color: "#6b778c", fontSize: "14px" }}
+          >
+            {sortedData.length} total{" "}
+            {sortedData.length === 1 ? "activity" : "activities"}
             {hasActiveFilters && ` (${filteredData.length} filtered)`}
           </p>
         </div>
-        
+
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           {hasActiveFilters && (
-            <Button 
-              appearance="subtle" 
-              onClick={clearFilters}
-            >
+            <Button appearance="subtle" onClick={clearFilters}>
               Clear Filters
             </Button>
           )}
@@ -649,14 +718,27 @@ export default function App() {
         isLoading={loading}
         emptyView={
           <div style={{ textAlign: "center", padding: "32px" }}>
-            <p style={{ fontSize: "16px", margin: "0 0 8px 0", color: "#6b778c" }}>
-              {hasActiveFilters ? "No activities match your current filters" : "No activities found"}
+            <p
+              style={{
+                fontSize: "16px",
+                margin: "0 0 8px 0",
+                color: "#6b778c",
+              }}
+            >
+              {hasActiveFilters
+                ? "No activities match your current filters"
+                : "No activities found"}
             </p>
-            <p style={{ fontSize: "14px", margin: "0 0 16px 0", color: "#6b778c" }}>
-              {hasActiveFilters 
-                ? "Try adjusting or clearing your filters to see more results." 
-                : "There are no change log entries for this issue yet."
-              }
+            <p
+              style={{
+                fontSize: "14px",
+                margin: "0 0 16px 0",
+                color: "#6b778c",
+              }}
+            >
+              {hasActiveFilters
+                ? "Try adjusting or clearing your filters to see more results."
+                : "There are no change log entries for this issue yet."}
             </p>
             {hasActiveFilters && (
               <Button appearance="link" onClick={clearFilters}>
@@ -669,23 +751,27 @@ export default function App() {
 
       {/* Custom Pagination */}
       {totalPages > 1 && (
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          marginTop: "16px",
-          flexWrap: "wrap",
-          gap: "16px"
-        }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "16px",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "14px", color: "#6b778c" }}>Items per page:</span>
+            <span style={{ fontSize: "14px", color: "#6b778c" }}>
+              Items per page:
+            </span>
             <Select
               value={{ label: pageSize.toString(), value: pageSize }}
               options={[
                 { label: "10", value: 10 },
                 { label: "25", value: 25 },
                 { label: "50", value: 50 },
-                { label: "100", value: 100 }
+                { label: "100", value: 100 },
               ]}
               onChange={(option) => {
                 setPageSize(option.value);
@@ -693,7 +779,7 @@ export default function App() {
               }}
               isSearchable={false}
               styles={{
-                container: (provided) => ({ ...provided, minWidth: "80px" })
+                container: (provided) => ({ ...provided, minWidth: "80px" }),
               }}
             />
           </div>
@@ -702,13 +788,32 @@ export default function App() {
             pages={[...Array(totalPages)].map((_, i) => ({
               href: `#page-${i + 1}`,
               label: (i + 1).toString(),
-              'aria-label': `Page ${i + 1}`
+              "aria-label": `Page ${i + 1}`,
             }))}
             selectedIndex={currentPage - 1}
             onChange={(_, page) => setCurrentPage(page + 1)}
           />
         </div>
       )}
+    </div>
+  );
+
+  return (
+    <div>
+      <Tabs
+        onChange={(index) => setActiveTab(index)}
+        selected={activeTab}
+        id="issue-changelog-tabs"
+      >
+        <TabList>
+          <Tab>📊 Dashboard</Tab>
+          <Tab>📋 Activities</Tab>
+        </TabList>
+        <TabPanel>
+          <Dashboard />
+        </TabPanel>
+        <TabPanel>{renderActivitiesTab()}</TabPanel>
+      </Tabs>
     </div>
   );
 }
